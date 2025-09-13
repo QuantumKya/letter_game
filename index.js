@@ -1,12 +1,4 @@
-import './victor.min.js';
-import { Player } from './classes.js';
-import { CANVASH, CANVASW } from './const.js';
-
 /* Canvas Setup */
-
-const canvas = document.querySelector("canvas"); // canvas setup
-const ctx = canvas.getContext("2d"); // canvas context
-
 
 canvas.width = CANVASW;
 canvas.height = CANVASH;
@@ -20,9 +12,21 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 const player = new Player();
 
+const bullet1 = new Bullet(
+    BulletUtils.circularTravel(new Victor(300, 300), 100, 30, 60, true, 'outward'),
+    BulletUtils.DIAMOND
+);
 
+let ring = BulletUtils.circleGroup(
+    BulletUtils.DIAMOND,
+    12,
+    new Victor(300, 300), 150, 0, 60, true, 'inward'
+);
+for (const b of ring) b.begin();
 
-
+let bulletManager = new BulletManager();
+bulletManager.addBullet(ring, 1.5, 3);
+bulletManager.start();
 
 
 
@@ -34,6 +38,10 @@ function animFrame() {
     // Bullet Drawing
     ctx.fillStyle = "white";
     ctx.fillRect(400, 500, 5, 5);
+
+    //bullet1.update();
+    //for (const bullet of ring) bullet.update();
+    bulletManager.update();
 
     // Player Damage Check
     player.checkForWhite(ctx);

@@ -157,7 +157,7 @@ class Player {
 
     takeDamage() {
         if (this.invulnerable) return;
-        this.health -= 2;
+        this.health -= 1;
         this.invulnerable = true;
         setTimeout(() => {
             this.invulnerable = false;
@@ -194,13 +194,13 @@ class Bullet {
     constructor(moveFunc, drawFunc) {
         this.moveInst = moveFunc;
         this.drawInst = drawFunc;
-        this.initTime = 0;
+        this.startTime = 0;
         this.orientation = this.moveInst(0);
         this.outOfScope = false;
     }
 
     update() {
-        this.orientation = this.moveInst(Date.now() - this.initTime);
+        this.orientation = this.moveInst(Date.now() - this.startTime);
         const [px, py] = this.orientation.pos.toArray();
 
         this.outOfScope = (px > CANVASW + 100 || px < -100 || py > CANVASH + 100 || py < -100);
@@ -223,7 +223,7 @@ class Bullet {
     }
 
     start() {
-        this.initTime = Date.now();
+        this.startTime = Date.now();
     }
 
     changeScale(scale) {
@@ -231,10 +231,50 @@ class Bullet {
     }
 }
 
+class WarnedBullet extends Bullet {
+    /**
+     * @param {function(number): {pos: Victor, rotation: number, scale: Victor}} moveFunc - Function to move the bullet, receives current time as argument, returns object of properties
+     * @param {function(): void} drawFunc - Function to draw the bullet in its default orientation, (0, 0) as anchor (default rotation is facing RIGHT)
+     * @param {function(number): {pos: Victor, rotation: number, scale: Victor}} warnMove - Function to move the bullet warning
+     * @param {function(number): void} warnDraw - Function to draw the bullet warning
+     */
+    constructor(moveFunc, drawFunc, warnMove, warnDraw) {
+        super(moveFunc, drawFunc);
+        this.warnMove = warnMove;
+        this.warnDraw = warnDraw;
+    }
+
+    draw() {
+        ctx.save();
+        
+        ctx.strokeStyle = 'red';
+
+        const warnOrient = this.warnMove(Date.now() - this.startTime);
+        
+        ctx.translate(warnOrient.pos.x, warnOrient.pos.y);
+        ctx.scale(warnOrient.scale.x, warnOrient.scale.y);
+        ctx.rotate(warnOrient.rotation);
+        
+        this.warnDraw(Date.now() - this.startTime);
+        
+        ctx.restore();
+        super.draw();
+    }
+}
+
 class BulletManager {
     constructor() {
         this.pattern = [];
         this.startTime = 0;
+        this.debugMode = false;
+    }
+
+    get length() {
+        let max = 0;
+        for (const blt of this.pattern) {
+            max = Math.max(max, blt.end);
+        }
+        return max;
     }
 
     update() {
@@ -245,12 +285,16 @@ class BulletManager {
             if (time >= b.start * 1000 && time <= b.end * 1000) {
                 if (Array.isArray(b.bullet)) {
                     for (const bullet of b.bullet) {
-                        if (bullet.initTime === 0) bullet.start();
+                        if (bullet.startTime === 0) bullet.start();
                         bullet.update();
                     }
                 }
-                else {
-                    if (b.bullet.initTime === 0) b.bullet.start();
+                else if (b.bullet instanceof Bullet) {
+                    if (b.bullet.startTime === 0) b.bullet.start();
+                    b.bullet.update();
+                }
+                else if (b.bullet instanceof BulletManager) {
+                    if (b.bullet.startTime === 0) b.bullet.start();
                     b.bullet.update();
                 }
             }
@@ -259,7 +303,7 @@ class BulletManager {
 
     /**
      * Add `Bullet` or array of `Bullet`s to the pattern.
-     * @param {Bullet | Bullet[] | BulletManager} bullet - The `Bullet`(s) to activate
+     * @param {Bullet | Bullet[]} bullet - The `Bullet`(s) to activate
      * @param {number} startTime - the time to activate the bullet, in seconds
      * @param {number} endTime - the time to stop the bullet, in seconds
      */
@@ -267,16 +311,21 @@ class BulletManager {
         this.pattern.push({ bullet: bullet, start: startTime, end: endTime });
     }
 
+    /**
+     * Add `BulletManager` to the pattern.
+     * @param {BulletManager} bm - The `BulletManager` to activate
+     * @param {number} startTime - the time to activate the `BulletManager`, in seconds
+     */
+    addBM(bm, startTime) {
+        this.pattern.push({ bullet: bm, start: startTime, end: startTime + bm.length });
+    }
+
     start() {
         this.startTime = Date.now();
-        for (const b of this.pattern) {
-            if (Array.isArray(b.bullet)) {
-                for (const bullet of b.bullet) bullet.start();
-            }
-            else if (b.bullet instanceof BulletManager) {
-                b.bullet.start();
-            }
-        }
+    }
+
+    debug() {
+        this.debugMode = true;
     }
 }
 
@@ -292,15 +341,28 @@ class BulletUtils {
     }
     static CIRCLE = () => {
         ctx.beginPath();
-        ctx.arc(0, 0, 15, 0, 360);
+        ctx.arc(0, 0, 15, 0, DEGRAD(360));
         ctx.fill();
     }
     static LINE = () => {
         ctx.fillRect(0, 3, 30, 6);
     }
-    static B = () => {
-        ctx.font = '40px Verdana';
-        ctx.fillText("B", 0, 0);
+
+    /**
+     * Transforms a shape for drawing. Can be used for time-based orientation changes.
+     * @param {function(): void} shape - shape to transform
+     * @param {Victor} pos - translation
+     * @param {number} rotation - rotation
+     * @param {Victor} scale - scaling
+     * @returns 
+     */
+    static transform(shape, pos = new Victor(0, 0), rotation = 0, scale = new Victor(1, 1)) {
+        return () => {
+            ctx.translate(pos.x, pos.y);
+            ctx.scale(scale.x, scale.y);
+            ctx.rotate(DEGRAD(rotation));
+            shape();
+        };
     }
 
     /**
@@ -385,8 +447,60 @@ class BulletUtils {
         let manager = new BulletManager();
         for (let i = 0; i <= length; i += 1/freq + 0.3 * Math.random()) {
             const randx = leftSide + Math.random() * (rightSide - leftSide);
-            manager.addBullet(new Bullet(BulletUtils.linearTravel(new Victor(randx, -20), angle + 90, speed + 50 * (1-Math.random())), bullet), i, length);
+            manager.addBullet(new Bullet(BulletUtils.linearTravel(new Victor(randx, -20), angle + 90, speed + 50 * (1-Math.random())), bullet), i, length + CANVASH / speed);
         }
         return manager;
+    }
+
+    /**
+     * 
+     * @param {Victor} pos - origin of explosion
+     * @param {number} size - radius of explosion, in 15x pixels
+     * @param {number} warning - duration of warning, in seconds
+     * @param {number} attack - duration of explosion growth, in seconds
+     * @param {number} sustain - duration of the explosion staying at radius, in seconds
+     * @param {number} decay - duration of decay, in seconds
+     * @returns 
+     */
+    static explosion(pos, size, warning, attack, sustain, decay) {
+        return new WarnedBullet((t) => {
+            const scl = ((t) => {
+                if (t <= warning * 1000) {
+                    return 0;
+                }
+                else if (t <= (warning + attack) * 1000) {
+                    return (t - warning * 1000) / (attack * 1000);
+                }
+                else if (t <= (warning + attack + sustain) * 1000) {
+                    return 1 + 0.05 * Math.sin(((t - (warning + attack) * 1000) / (sustain * 1000)) * (6 * Math.PI));
+                }
+                else if (t <= (warning + attack + sustain + decay) * 1000) {
+                    return 1 - ((t - (warning + attack + sustain) * 1000) / (decay * 1000));
+                }
+                else if (t > (warning + attack + sustain + decay) * 1000) {
+                    return 0;
+                }
+            })(t);
+            return {
+                pos: pos,
+                rotation: 0,
+                scale: new Victor(size * scl, size * scl)
+            };
+        },
+        BulletUtils.CIRCLE,
+        (t) => {
+            return {
+                pos: pos,
+                rotation: 0,
+                scale: new Victor(1, 1)
+            };
+        },
+        (t) => {
+            if (t <= (warning + attack) * 1000) {
+                ctx.beginPath();
+                ctx.arc(0, 0, size * 15, 0, DEGRAD(360));
+                ctx.stroke();
+            }
+        });
     }
 }

@@ -13,20 +13,30 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 const player = new Player();
 
 const bullet1 = new Bullet(
-    BulletUtils.circularTravel(new Victor(300, 300), 100, 30, 60, true, 'outward'),
+    BulletUtils.linearTravel(new Victor(-20, -30), 35, 200),
     BulletUtils.DIAMOND
 );
+bullet1.start();
 
-let ring = BulletUtils.circleGroup(
-    BulletUtils.DIAMOND,
-    12,
-    new Victor(300, 300), 150, 0, 60, true, 'inward'
+let Osupport = BulletUtils.circleGroup(
+    BulletUtils.CIRCLE,
+    25,
+    new Victor(CANVASW / 2, CANVASH / 2), CANVASW / 2 - 50, 0, 100, true, 'inward'
 );
-for (const b of ring) b.begin();
+for (const bullet of Osupport) bullet.start();
+
 
 let bulletManager = new BulletManager();
-bulletManager.addBullet(ring, 1.5, 3);
-bulletManager.start();
+bulletManager.addBullet(Osupport, 0.5, 10);
+//bulletManager.start();
+
+let rain = BulletUtils.rainAttack(
+    BulletUtils.LINE,
+    150, CANVASW - 150,
+    250,
+    10, 15
+);
+rain.start();
 
 
 
@@ -36,12 +46,10 @@ function animFrame() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Bullet Drawing
-    ctx.fillStyle = "white";
-    ctx.fillRect(400, 500, 5, 5);
-
     //bullet1.update();
-    //for (const bullet of ring) bullet.update();
-    bulletManager.update();
+    for (const bullet of Osupport) bullet.update();
+    //bulletManager.update();
+    rain.update();
 
     // Player Damage Check
     player.checkForWhite(ctx);
@@ -51,7 +59,8 @@ function animFrame() {
     player.draw(ctx);
 
     // UI Drawing
-    ctx.font = '50px Monospace'
+    ctx.font = '50px Monospace';
+    ctx.fillStyle = 'white';
     ctx.fillText(`${player.health}/5`, 10, 680);
 }
 animFrame();

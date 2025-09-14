@@ -1,14 +1,22 @@
 const invincibility = 2000;
 
+//const swordlength = 400;
+
 class Player {
     constructor() {
-        this.pos = new Victor(0, 0);
+        this.pos = new Victor(CANVASW / 2, CANVASH / 2);
         this.vel = new Victor(0, 0);
-        this.size = new Victor(50, 50);
+        this.size = new Victor(30, 30);
         this.speed = 3;
         this.health = 5;
-        this.timeSlot = 0;
+        this.hitTime = 0;
         this.invulnerable = false;
+
+        /*
+        this.slashing = false;
+        this.slashTime = 0;
+        this.slashAngle = 0;
+        */
 
 
         this.keys = {
@@ -54,14 +62,72 @@ class Player {
                 }
             }
         });
+
+        /*
+        canvas.addEventListener('mousedown', (event) => {
+            if (this.slashing) return;
+
+            this.slashing = true;
+            this.slashTime = Date.now();
+            this.slashAngle = getAngleToMouse(this.center.x, this.center.y);
+            setTimeout(() => { this.slashing = false; }, swordlength + 50);
+        });
+        */
+    }
+    
+    get center() {
+        return this.pos.clone().add(this.size.clone().divide(new Victor(2, 2)));
     }
     
     draw() {
         ctx.save();
-        const opac = this.invulnerable ? Math.min(Math.cos((Date.now() - this.timeSlot) / (invincibility / (6*Math.PI))) * 0.4 + 0.75, 1) : 1;
+        const opac = this.invulnerable ? Math.min(Math.cos((Date.now() - this.hitTime) / (invincibility / (6*Math.PI))) * 0.4 + 0.75, 1) : 1;
         ctx.fillStyle = `rgba(255, 0, 0, ${opac})`;
         ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
+
+        //this.drawSword();
         ctx.restore();
+    }
+
+    drawSword() {
+        const innerR = 30;
+        const outerR = 70;
+        const arcStart = DEGRAD(-50);
+        const arcEnd = DEGRAD(50);
+
+        const angle = this.slashing ? this.slashAngle : getAngleToMouse(this.center.x, this.center.y);
+        
+        if (this.slashing) {
+            ctx.restore();
+            ctx.save();
+
+            ctx.fillStyle = 'rgba(255, 80, 80, 0.6)';
+            ctx.translate(this.center.x, this.center.y)
+            ctx.rotate(angle);
+            
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(arcStart) * innerR, Math.sin(arcStart) * innerR);
+            ctx.arc(0, 0, outerR, arcStart, arcEnd);
+            ctx.lineTo(Math.cos(arcEnd) * innerR, Math.sin(arcEnd) * innerR);
+            ctx.arc(0, 0, innerR, arcEnd, arcStart, true);
+            ctx.fill();
+
+            ctx.rotate(-angle);
+            ctx.translate(-this.center.x, -this.center.y);
+        }
+
+        ctx.fillStyle = 'rgba(255, 0, 0, 1)';
+        ctx.font = '40px Verdana';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+
+        ctx.translate(this.center.x, this.center.y);
+        if (this.slashing) {
+            const t = (Date.now() - this.slashTime) / swordlength;
+            ctx.rotate(angle + DEGRAD(90) + arcEnd * t + arcStart * (1-t));
+        }
+        else ctx.rotate(angle + DEGRAD(90));
+        ctx.fillText('!', 0, -this.size.y * 1.3 / 2);
     }
 
     update() {
@@ -90,14 +156,14 @@ class Player {
     }
 
     takeDamage() {
-        console.log("taken damage");
         if (this.invulnerable) return;
         this.health -= 2;
         this.invulnerable = true;
         setTimeout(() => {
             this.invulnerable = false;
         }, invincibility);
-        this.timeSlot = Date.now();
+        this.hitTime = Date.now();
+        hitsound.play();
     }
 
     checkForWhite() {
@@ -156,7 +222,7 @@ class Bullet {
         ctx.restore();
     }
 
-    begin() {
+    start() {
         this.initTime = Date.now();
     }
 
@@ -178,16 +244,22 @@ class BulletManager {
         for (const b of this.pattern) {
             if (time >= b.start * 1000 && time <= b.end * 1000) {
                 if (Array.isArray(b.bullet)) {
-                    for (const bullet of b.bullet) bullet.update();
+                    for (const bullet of b.bullet) {
+                        if (bullet.initTime === 0) bullet.start();
+                        bullet.update();
+                    }
                 }
-                else b.bullet.update();
+                else {
+                    if (b.bullet.initTime === 0) b.bullet.start();
+                    b.bullet.update();
+                }
             }
         }
     }
 
     /**
      * Add `Bullet` or array of `Bullet`s to the pattern.
-     * @param {Bullet | Bullet[]} bullet - The `Bullet`(s) to activate
+     * @param {Bullet | Bullet[] | BulletManager} bullet - The `Bullet`(s) to activate
      * @param {number} startTime - the time to activate the bullet, in seconds
      * @param {number} endTime - the time to stop the bullet, in seconds
      */
@@ -197,6 +269,14 @@ class BulletManager {
 
     start() {
         this.startTime = Date.now();
+        for (const b of this.pattern) {
+            if (Array.isArray(b.bullet)) {
+                for (const bullet of b.bullet) bullet.start();
+            }
+            else if (b.bullet instanceof BulletManager) {
+                b.bullet.start();
+            }
+        }
     }
 }
 
@@ -210,6 +290,18 @@ class BulletUtils {
         ctx.lineTo(-30, 0);
         ctx.fill();
     }
+    static CIRCLE = () => {
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, 360);
+        ctx.fill();
+    }
+    static LINE = () => {
+        ctx.fillRect(0, 3, 30, 6);
+    }
+    static B = () => {
+        ctx.font = '40px Verdana';
+        ctx.fillText("B", 0, 0);
+    }
 
     /**
      * Returns a `Bullet` movement function describing movement along a straight line.
@@ -222,7 +314,7 @@ class BulletUtils {
         return (t) => {
             return {
                 pos: new Victor(start.x + Math.cos(DEGRAD(angle)) * ((t/1000) * speed), start.y + Math.sin(DEGRAD(angle)) * ((t/1000) * speed)),
-                rotation: angle,
+                rotation: DEGRAD(angle),
                 scale: new Victor(1, 1)
             };
         };
@@ -276,5 +368,25 @@ class BulletUtils {
             ));
         }
         return bullets;
+    }
+
+    /**
+     * Returns a `BulletManager` describing a rain attack, where bullets rain down in random positions.
+     * @param {function(): void} bullet - `Bullet` draw method to use for loop
+     * @param {number} leftSide - left bound of rain area
+     * @param {number} rightSide - right bound of rain area
+     * @param {number} speed - speed of drops in pixels per second
+     * @param {number} length - duration of rain
+     * @param {number} freq - drops per second
+     * @param {number} angle - angle at which rain comes, set to 0 by default
+     * @returns 
+     */
+    static rainAttack(bullet, leftSide, rightSide, speed, length, freq, angle = 0) {
+        let manager = new BulletManager();
+        for (let i = 0; i <= length; i += 1/freq + 0.3 * Math.random()) {
+            const randx = leftSide + Math.random() * (rightSide - leftSide);
+            manager.addBullet(new Bullet(BulletUtils.linearTravel(new Victor(randx, -20), angle + 90, speed + 50 * (1-Math.random())), bullet), i, length);
+        }
+        return manager;
     }
 }

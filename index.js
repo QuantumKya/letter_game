@@ -48,15 +48,15 @@ for (let i = 0; i < 5; i++) {
     bulletManager.addBullet(BulletUtils.explosion(
         new Victor(200 + Math.random() * (500 - 200), 200 + Math.random() * (500 - 200)),
         9,
-        1.5, 0.5, 1, 0.5
-    ), 2 + i*2, 2 + i*2 + 3.5);
+        0.75, 0.1, 1, 0.5
+    ), 1.6 + i*2, 1.6 + i*2 + 2.75);
 }
 bulletManager.start();
 
 
 
 function animFrame() {
-    requestAnimationFrame(animFrame);
+    const framestart = Date.now();
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -77,6 +77,11 @@ function animFrame() {
     ctx.font = '50px Monospace';
     ctx.fillStyle = 'white';
     ctx.fillText(`${player.health}/5`, 10, 680);
+
+
+    const elapsed = Date.now() - framestart;
+    if (elapsed < 1000 / FPS) setTimeout(() => { CURRENTFRAME += 1; requestAnimationFrame(animFrame); }, 1000 / FPS - elapsed);
+    else { CURRENTFRAME += 1; requestAnimationFrame(animFrame); }
 }
 animFrame();
 

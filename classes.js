@@ -7,8 +7,9 @@ class Player {
         this.pos = new Victor(CANVASW / 2, CANVASH / 2);
         this.vel = new Victor(0, 0);
         this.size = new Victor(30, 30);
-        this.speed = 3;
+        this.speed = 5;
         this.health = 5;
+
         this.hitTime = 0;
         this.invulnerable = false;
 
@@ -68,7 +69,7 @@ class Player {
             if (this.slashing) return;
 
             this.slashing = true;
-            this.slashTime = Date.now();
+            this.slashTime = CURRENTFRAME;
             this.slashAngle = getAngleToMouse(this.center.x, this.center.y);
             setTimeout(() => { this.slashing = false; }, swordlength + 50);
         });
@@ -81,7 +82,7 @@ class Player {
     
     draw() {
         ctx.save();
-        const opac = this.invulnerable ? Math.min(Math.cos((Date.now() - this.hitTime) / (invincibility / (6*Math.PI))) * 0.4 + 0.75, 1) : 1;
+        const opac = this.invulnerable ? Math.min(Math.cos((CURRENTFRAME - this.hitTime) / (invincibility / (6*Math.PI))) * 0.4 + 0.75, 1) : 1;
         ctx.fillStyle = `rgba(255, 0, 0, ${opac})`;
         ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
 
@@ -123,7 +124,7 @@ class Player {
 
         ctx.translate(this.center.x, this.center.y);
         if (this.slashing) {
-            const t = (Date.now() - this.slashTime) / swordlength;
+            const t = (CURRENTFRAME - this.slashTime) / swordlength;
             ctx.rotate(angle + DEGRAD(90) + arcEnd * t + arcStart * (1-t));
         }
         else ctx.rotate(angle + DEGRAD(90));
@@ -162,7 +163,7 @@ class Player {
         setTimeout(() => {
             this.invulnerable = false;
         }, invincibility);
-        this.hitTime = Date.now();
+        this.hitTime = CURRENTFRAME;
         hitsound.play();
     }
 
@@ -194,13 +195,13 @@ class Bullet {
     constructor(moveFunc, drawFunc) {
         this.moveInst = moveFunc;
         this.drawInst = drawFunc;
-        this.startTime = 0;
+        this.startTime = -1;
         this.orientation = this.moveInst(0);
         this.outOfScope = false;
     }
 
     update() {
-        this.orientation = this.moveInst(Date.now() - this.startTime);
+        this.orientation = this.moveInst(CURRENTFRAME - this.startTime);
         const [px, py] = this.orientation.pos.toArray();
 
         this.outOfScope = (px > CANVASW + 100 || px < -100 || py > CANVASH + 100 || py < -100);
@@ -223,7 +224,7 @@ class Bullet {
     }
 
     start() {
-        this.startTime = Date.now();
+        this.startTime = CURRENTFRAME;
     }
 
     changeScale(scale) {
@@ -249,13 +250,13 @@ class WarnedBullet extends Bullet {
         
         ctx.strokeStyle = 'red';
 
-        const warnOrient = this.warnMove(Date.now() - this.startTime);
+        const warnOrient = this.warnMove(CURRENTFRAME - this.startTime);
         
         ctx.translate(warnOrient.pos.x, warnOrient.pos.y);
         ctx.scale(warnOrient.scale.x, warnOrient.scale.y);
         ctx.rotate(warnOrient.rotation);
         
-        this.warnDraw(Date.now() - this.startTime);
+        this.warnDraw(CURRENTFRAME - this.startTime);
         
         ctx.restore();
         super.draw();
@@ -265,7 +266,7 @@ class WarnedBullet extends Bullet {
 class BulletManager {
     constructor() {
         this.pattern = [];
-        this.startTime = 0;
+        this.startTime = -1;
         this.debugMode = false;
     }
 
@@ -278,23 +279,23 @@ class BulletManager {
     }
 
     update() {
-        if (this.startTime === 0) return;
+        if (this.startTime === -1) return;
 
-        const time = Date.now() - this.startTime;
+        const time = CURRENTFRAME - this.startTime;
         for (const b of this.pattern) {
-            if (time >= b.start * 1000 && time <= b.end * 1000) {
+            if (time >= b.start * FPS && time <= b.end * FPS) {
                 if (Array.isArray(b.bullet)) {
                     for (const bullet of b.bullet) {
-                        if (bullet.startTime === 0) bullet.start();
+                        if (bullet.startTime === -1) bullet.start();
                         bullet.update();
                     }
                 }
                 else if (b.bullet instanceof Bullet) {
-                    if (b.bullet.startTime === 0) b.bullet.start();
+                    if (b.bullet.startTime === -1) b.bullet.start();
                     b.bullet.update();
                 }
                 else if (b.bullet instanceof BulletManager) {
-                    if (b.bullet.startTime === 0) b.bullet.start();
+                    if (b.bullet.startTime === -1) b.bullet.start();
                     b.bullet.update();
                 }
             }
@@ -321,7 +322,7 @@ class BulletManager {
     }
 
     start() {
-        this.startTime = Date.now();
+        this.startTime = CURRENTFRAME;
     }
 
     debug() {
@@ -375,7 +376,7 @@ class BulletUtils {
     static linearTravel(start, angle, speed) {
         return (t) => {
             return {
-                pos: new Victor(start.x + Math.cos(DEGRAD(angle)) * ((t/1000) * speed), start.y + Math.sin(DEGRAD(angle)) * ((t/1000) * speed)),
+                pos: new Victor(start.x + Math.cos(DEGRAD(angle)) * ((t/FPS) * speed), start.y + Math.sin(DEGRAD(angle)) * ((t/FPS) * speed)),
                 rotation: DEGRAD(angle),
                 scale: new Victor(1, 1)
             };
@@ -394,7 +395,7 @@ class BulletUtils {
      */
     static circularTravel(origin, radius, startAngle, speed, ccwise, mode) {
         return (t) => {
-            const degangle = startAngle + (ccwise ? -1 : 1) * (t/1000) * speed;
+            const degangle = startAngle + (ccwise ? -1 : 1) * (t/FPS) * speed;
             const angle = DEGRAD(degangle);
             const rot = {
                 inward: angle + DEGRAD(180),
@@ -460,24 +461,24 @@ class BulletUtils {
      * @param {number} attack - duration of explosion growth, in seconds
      * @param {number} sustain - duration of the explosion staying at radius, in seconds
      * @param {number} decay - duration of decay, in seconds
-     * @returns 
+     * @returns {BulletManager} `BulletManager` of bomb and explosion
      */
     static explosion(pos, size, warning, attack, sustain, decay) {
-        return new WarnedBullet((t) => {
+        const plose = new WarnedBullet((t) => {
             const scl = ((t) => {
-                if (t <= warning * 1000) {
+                if (t <= warning * FPS) {
                     return 0;
                 }
-                else if (t <= (warning + attack) * 1000) {
-                    return (t - warning * 1000) / (attack * 1000);
+                else if (t <= (warning + attack) * FPS) {
+                    return (t - warning * FPS) / (attack * FPS);
                 }
-                else if (t <= (warning + attack + sustain) * 1000) {
-                    return 1 + 0.05 * Math.sin(((t - (warning + attack) * 1000) / (sustain * 1000)) * (6 * Math.PI));
+                else if (t <= (warning + attack + sustain) * FPS) {
+                    return 1 + 0.05 * Math.sin(((t - (warning + attack) * FPS) / (sustain * FPS)) * (6 * Math.PI));
                 }
-                else if (t <= (warning + attack + sustain + decay) * 1000) {
-                    return 1 - ((t - (warning + attack + sustain) * 1000) / (decay * 1000));
+                else if (t <= (warning + attack + sustain + decay) * FPS) {
+                    return 1 - ((t - (warning + attack + sustain) * FPS) / (decay * FPS));
                 }
-                else if (t > (warning + attack + sustain + decay) * 1000) {
+                else if (t > (warning + attack + sustain + decay) * FPS) {
                     return 0;
                 }
             })(t);
@@ -496,11 +497,44 @@ class BulletUtils {
             };
         },
         (t) => {
-            if (t <= (warning + attack) * 1000) {
+            if (t <= (warning + attack) * FPS) {
                 ctx.beginPath();
                 ctx.arc(0, 0, size * 15, 0, DEGRAD(360));
                 ctx.stroke();
             }
         });
+
+        const mag = 100;
+        const thrw = 45;
+
+        const bomb = new Bullet((t) => {
+            if (t < thrw) {
+                const side = pos.x > CANVASW / 2;
+                const dist = side ? CANVASW - pos.x + 30 : pos.x + 30;
+                const x = side ? CANVASW + 30 - (t/thrw) * dist : -30 + (t/thrw) * dist;
+                const y = ((t/thrw) - 1) * (t/thrw) * 8 * mag + pos.y;
+
+                return {
+                    pos: new Victor(x, y),
+                    rotation: 0,
+                    scale: new Victor(2, 2)
+                };
+            }
+            else {
+                return {
+                    pos: pos,
+                    rotation: 0,
+                    scale: new Victor(2, 2)
+                };
+            }
+        },
+        () => {
+            ctx.drawImage(bombimage, -8, -8, 16, 16);
+        });
+
+        const bm = new BulletManager();
+        bm.addBullet(bomb, 0, thrw / FPS + 1.5);
+        bm.addBullet(plose, thrw / FPS, thrw / FPS + warning + attack + sustain + decay);
+        return bm;
     }
 }

@@ -8,8 +8,14 @@ const CANVASH = 700;
 
 const canvas = document.querySelector("canvas"); // canvas setup
 const ctx = canvas.getContext("2d"); // canvas context
+ctx.imageSmoothingEnabled = false;
 
 const hitsound = new Audio("snd_hurt1.wav");
+const bombimage = new Image();
+bombimage.src = 'bomb.png';
+
+let CURRENTFRAME = 0;
+const FPS = 60;
 
 let mousePos = new Victor(0, 0);
 canvas.addEventListener('mousemove', (event) => {

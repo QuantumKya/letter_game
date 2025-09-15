@@ -1,13 +1,13 @@
-const invincibility = 2000;
+const invincibility = 2;
 
-//const swordlength = 400;
+//const swordlength = 0.4;
 
 class Player {
     constructor() {
         this.pos = new Victor(CANVASW / 2, CANVASH / 2);
         this.vel = new Victor(0, 0);
         this.size = new Victor(30, 30);
-        this.speed = 5;
+        this.speed = 9;
         this.health = 5;
 
         this.hitTime = 0;
@@ -71,7 +71,7 @@ class Player {
             this.slashing = true;
             this.slashTime = CURRENTFRAME;
             this.slashAngle = getAngleToMouse(this.center.x, this.center.y);
-            setTimeout(() => { this.slashing = false; }, swordlength + 50);
+            setTimeout(() => { this.slashing = false; }, swordlength * 1000 + 50);
         });
         */
     }
@@ -82,7 +82,7 @@ class Player {
     
     draw() {
         ctx.save();
-        const opac = this.invulnerable ? Math.min(Math.cos((CURRENTFRAME - this.hitTime) / (invincibility / (6*Math.PI))) * 0.4 + 0.75, 1) : 1;
+        const opac = this.invulnerable ? Math.min(Math.cos((CURRENTFRAME - this.hitTime) * (6*Math.PI) / (invincibility * FPS)) * 0.4 + 0.75, 1) : 1;
         ctx.fillStyle = `rgba(255, 0, 0, ${opac})`;
         ctx.fillRect(this.pos.x, this.pos.y, this.size.x, this.size.y);
 
@@ -162,7 +162,7 @@ class Player {
         this.invulnerable = true;
         setTimeout(() => {
             this.invulnerable = false;
-        }, invincibility);
+        }, invincibility * 1000);
         this.hitTime = CURRENTFRAME;
         hitsound.play();
     }
@@ -535,6 +535,92 @@ class BulletUtils {
         const bm = new BulletManager();
         bm.addBullet(bomb, 0, thrw / FPS + 1.5);
         bm.addBullet(plose, thrw / FPS, thrw / FPS + warning + attack + sustain + decay);
+        return bm;
+    }
+
+    /**
+     * 
+     * @param {number} height - Y position of gun
+     * @param {boolean} side - true = right, false = left
+     * @param {number} wait - amount of time before shooting, in seconds
+     * @param {number} bullets - number of bullets to shoot
+     * @param {number} spread - spread, in degrees
+     * @param {Player} player - the player.
+     */
+    static Rgun(height, side, wait, bullets, spread, player) {
+        const gunpos = new Victor(side ? CANVASW - 10 : 10, height);
+        const scl = new Victor(side ? 1 : -1, 1);
+        const anglefind = (t) => {
+            if (t < wait * FPS) {
+                const angle = player.center.clone().subtract(gunpos).horizontalAngleDeg();
+                return angle;
+            }
+            else if (t === Math.floor(wait * FPS)) {
+                varRegister.Rgun = player.center.clone().subtract(gunpos).horizontalAngleDeg();
+                return varRegister.Rgun;
+            }
+            else if (t < (wait + 0.10) * FPS) {
+                return varRegister.Rgun + (side ? 1 : -1) * 10 * Math.sin((t - wait * FPS) * (Math.PI/2) / (0.10 * FPS));
+            }
+            else if (t < (wait + 0.5) * FPS) {
+                return varRegister.Rgun + (side ? 1 : -1) * 10 * Math.sin(Math.PI / 2 + (t - (wait + 0.1) * FPS) * (Math.PI/2) / (0.4 * FPS));
+            }
+            else {
+                return varRegister.Rgun;
+            }
+        };
+
+        const gun = new WarnedBullet(
+            (t) => {
+                return {
+                    pos: gunpos,
+                    rotation: DEGRAD(-anglefind(t) + 90),
+                    scale: scl
+                };
+            },
+            () => {
+                ctx.font = '84px Roboto';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText('r', 0, 0);
+            },
+            (t) => {
+                return {
+                    pos: gunpos,
+                    rotation: DEGRAD(anglefind(t)),
+                    scale: new Victor(1, 1)
+                };
+            },
+            (t) => {
+                ctx.strokeStyle = 'red';
+                ctx.beginPath();
+                ctx.moveTo(30, -5);
+                ctx.lineTo(1000, -5);
+                ctx.stroke();
+            }
+        );
+
+        const bm = new BulletManager();
+        bm.addBullet(gun, 0, wait + bullets * 0.1 + 1);
+
+        bm.update = function() {
+            if (this.startTime === -1) return;
+            const time = CURRENTFRAME - this.startTime;
+            BulletManager.prototype.update.call(this);
+
+            if (time === Math.floor((wait + 0.1) * FPS)) {
+                for (let i = 0; i < bullets; i++) {
+                    const angle = varRegister.Rgun;
+                    const spreadAngle = angle + (0.5 - Math.random()) * spread;
+                    this.addBullet(
+                        new Bullet(BulletUtils.linearTravel(gunpos, spreadAngle, 600),
+                            BulletUtils.DIAMOND
+                        ),
+                    wait + 0.1, wait + 2);
+                }
+            }
+        };
+
         return bm;
     }
 }

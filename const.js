@@ -14,6 +14,10 @@ const hitsound = new Audio("snd_hurt1.wav");
 const bombimage = new Image();
 bombimage.src = 'bomb.png';
 
+const varRegister = {
+    filler: 0
+};
+
 let CURRENTFRAME = 0;
 const FPS = 60;
 

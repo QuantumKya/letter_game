@@ -12,45 +12,46 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 const player = new Player();
 
-const bullet1 = new Bullet(
-    BulletUtils.linearTravel(new Victor(-20, -30), 35, 200),
-    BulletUtils.DIAMOND
-);
-bullet1.start();
-
 let Osupport = BulletUtils.circleGroup(
     BulletUtils.CIRCLE,
     25,
-    new Victor(CANVASW / 2, CANVASH / 2), CANVASW / 2 - 50, 0, 100, true, 'inward'
+    new Victor(CANVASW / 2, CANVASH / 2),
+    200,
+    0, 100, true,
+    'inward'
 );
-for (const bullet of Osupport) bullet.start();
 
 
 let bulletManager = new BulletManager();
-bulletManager.addBullet(Osupport, 0.5, 10);
 
-let rain = BulletUtils.rainAttack(
+let Isupport = BulletUtils.rainAttack(
     BulletUtils.LINE,
     150, CANVASW - 150,
     250,
     10, 15
 );
-bulletManager.addBM(rain, 1.5);
 
-let plosive = BulletUtils.explosion(
-    new Victor(200, 200),
-    8,
-    1.5, 0.5, 1, 0.5
-);
-
-let plosives = [];
-for (let i = 0; i < 5; i++) {
-    bulletManager.addBullet(BulletUtils.explosion(
+const Battack = (count) => [...Array(count).keys()].map(
+    (i) => BulletUtils.explosion(
         new Victor(200 + Math.random() * (500 - 200), 200 + Math.random() * (500 - 200)),
         9,
-        0.75, 0.1, 1, 0.5
-    ), 1.6 + i*2, 1.6 + i*2 + 2.75);
-}
+        0.5, 0.05, 0.8, 0.5
+    )
+);
+
+
+const Rguns = (count) => [...Array(count).keys()].map(
+    (i) => BulletUtils.Rgun(Math.random() * CANVASH, Math.random() > 0.5, 0.75, 3, 10, player)
+);
+
+
+
+//bulletManager.addBM(Isupport, 1.5);
+Rguns(10).forEach((rgun, i) => bulletManager.addBM(rgun, 1 + i*1.25));
+bulletManager.addBullet(Osupport, 5, 45);
+Battack(8).forEach((batt, i) => bulletManager.addBullet(batt, 12 + 1.35 + i*2, 12 + 1.35 + i*2 + 1.85));
+Rguns(10).forEach((rgun, i) => bulletManager.addBM(rgun, 30 + i*1.25));
+
 bulletManager.start();
 
 
@@ -61,27 +62,24 @@ function animFrame() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Bullet Drawing
-    //bullet1.update();
-    for (const bullet of Osupport) bullet.update();
     bulletManager.update();
-    //rain.update();
 
     // Player Damage Check
-    player.checkForWhite(ctx);
+    player.checkForWhite();
 
     // Player Drawing
     player.update();
-    player.draw(ctx);
+    player.draw();
 
     // UI Drawing
-    ctx.font = '50px Monospace';
+    ctx.font = '50px Roboto';
     ctx.fillStyle = 'white';
     ctx.fillText(`${player.health}/5`, 10, 680);
 
 
     const elapsed = Date.now() - framestart;
-    if (elapsed < 1000 / FPS) setTimeout(() => { CURRENTFRAME += 1; requestAnimationFrame(animFrame); }, 1000 / FPS - elapsed);
-    else { CURRENTFRAME += 1; requestAnimationFrame(animFrame); }
+    if (elapsed < 1000 / FPS) setTimeout(() => { CURRENTFRAME += 1; console.log('underframe'); requestAnimationFrame(animFrame); }, 1000 / FPS - elapsed);
+    else { CURRENTFRAME += 1; console.log('overframe!!!!!'); requestAnimationFrame(animFrame); }
 }
 animFrame();
 

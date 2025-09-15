@@ -552,7 +552,7 @@ class BulletUtils {
         const scl = new Victor(side ? 1 : -1, 1);
         const anglefind = (t) => {
             if (t < wait * FPS) {
-                const angle = player.center.clone().subtract(gunpos).horizontalAngleDeg();
+                let angle = player.center.clone().subtract(gunpos).horizontalAngleDeg();
                 return angle;
             }
             else if (t === Math.floor(wait * FPS)) {
@@ -574,7 +574,7 @@ class BulletUtils {
             (t) => {
                 return {
                     pos: gunpos,
-                    rotation: DEGRAD(-anglefind(t) + 90),
+                    rotation: DEGRAD(!side ? -anglefind(t) + 90 : (360 - (-anglefind(t) + 90)) % 360),
                     scale: scl
                 };
             },
@@ -592,10 +592,12 @@ class BulletUtils {
                 };
             },
             (t) => {
+                if (t > (wait + 0.3) * FPS) return;
+
                 ctx.strokeStyle = 'red';
                 ctx.beginPath();
-                ctx.moveTo(30, -5);
-                ctx.lineTo(1000, -5);
+                ctx.moveTo(30, 5 * (side ? 1 : -1));
+                ctx.lineTo(1000, 5 * (side ? 1 : -1));
                 ctx.stroke();
             }
         );

@@ -41,14 +41,14 @@ const Battack = (count) => [...Array(count).keys()].map(
 
 
 const Rguns = (count) => [...Array(count).keys()].map(
-    (i) => BulletUtils.Rgun(Math.random() * CANVASH, Math.random() > 0.5, 0.75, 3, 10, player)
+    (i) => BulletUtils.Rgun(100 + Math.random() * (600 - 100), Math.random() > 0.5, 0.75, 3, 10, player)
 );
 
 
 
 //bulletManager.addBM(Isupport, 1.5);
 Rguns(10).forEach((rgun, i) => bulletManager.addBM(rgun, 1 + i*1.25));
-bulletManager.addBullet(Osupport, 5, 45);
+//bulletManager.addBullet(Osupport, 5, 45);
 Battack(8).forEach((batt, i) => bulletManager.addBullet(batt, 12 + 1.35 + i*2, 12 + 1.35 + i*2 + 1.85));
 Rguns(10).forEach((rgun, i) => bulletManager.addBM(rgun, 30 + i*1.25));
 

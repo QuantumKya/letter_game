@@ -197,16 +197,15 @@ class Bullet {
         this.drawInst = drawFunc;
         this.startTime = -1;
         this.orientation = this.moveInst(0);
-        this.outOfScope = false;
     }
 
     update() {
         this.orientation = this.moveInst(CURRENTFRAME - this.startTime);
         const [px, py] = this.orientation.pos.toArray();
 
-        this.outOfScope = (px > CANVASW + 100 || px < -100 || py > CANVASH + 100 || py < -100);
+        const outOfScope = (px > CANVASW + 100 || px < -100 || py > CANVASH + 100 || py < -100);
 
-        if (!this.outOfScope) this.draw();
+        if (!outOfScope) this.draw();
     }
 
     draw() {
@@ -227,8 +226,12 @@ class Bullet {
         this.startTime = CURRENTFRAME;
     }
 
+    /**
+     * Change scaling of the bullet.
+     * @param {function(number): Victor} scale - scaling of `Bullet` as a function of time
+     */
     changeScale(scale) {
-        this.moveInst = (t) => { let orient = this.moveInst(); orient.scale = scale; };
+        this.moveInst = (t) => { let orient = this.moveInst(); orient.scale.multiply(scale(t)); return orient; };
     }
 }
 
@@ -260,6 +263,41 @@ class WarnedBullet extends Bullet {
         
         ctx.restore();
         super.draw();
+    }
+}
+
+class BulletGroup {
+    /**
+     * 
+     * @param {Bullet[]} bullets - An array of `Bullet`s
+     * @param {function(number): {pos: Victor, rotation: number, scale: Victor}} moveFunc - Move function for group of bullets
+     */
+    constructor(bullets, moveFunc) {
+        this.bullets = bullets;
+        this.moveInst = moveFunc;
+        this.orientation = this.moveInst(0);
+        this.startTime = -1;
+    }
+
+    update() {
+        this.orientation = this.moveInst(CURRENTFRAME - this.startTime);
+        for (const blt of this.bullets) blt.update();
+    }
+
+    draw() {
+        ctx.save();
+
+        const { pos: p, rotation: r, scale: s } = this.orientation;
+        ctx.translate(this.orientation.pos.x, this.orientation.pos.y);
+        ctx.scale(s.x, s.y);
+        ctx.rotate(DEGRAD(r));
+
+        for (const blt of this.bullets) blt.draw();
+        ctx.restore();
+    }
+
+    start() {
+        this.startTime = CURRENTFRAME;
     }
 }
 
@@ -298,13 +336,17 @@ class BulletManager {
                     if (b.bullet.startTime === -1) b.bullet.start();
                     b.bullet.update();
                 }
+                else if (b.bullet instanceof BulletGroup) {
+                    if (b.bullet.startTime === -1) b.bullet.start();
+                    b.bullet.update();
+                }
             }
         }
     }
 
     /**
      * Add `Bullet` or array of `Bullet`s to the pattern.
-     * @param {Bullet | Bullet[]} bullet - The `Bullet`(s) to activate
+     * @param {Bullet | Bullet[] | BulletGroup} bullet - The `Bullet`(s) to activate
      * @param {number} startTime - the time to activate the bullet, in seconds
      * @param {number} endTime - the time to stop the bullet, in seconds
      */
@@ -348,6 +390,11 @@ class BulletUtils {
     static LINE = () => {
         ctx.fillRect(0, 3, 30, 6);
     }
+
+    static ORIENT = (pos, rot, scl) => ({ pos: pos, rotation: rot, scale: scl });
+    static ORIENTPOS = (pos) => ({ pos: pos, rotation: 0, scale: new Victor(1, 1) });
+    static ORIENTPOSROT = (pos, rot) => ({ pos: pos, rotation: rot, scale: new Victor(1, 1) });
+    static ORIENTZERO = () => ({ pos: new Victor(0, 0), rotation: 0, scale: new Victor(1, 1) });
 
     /**
      * Transforms a shape for drawing. Can be used for time-based orientation changes.
@@ -411,7 +458,7 @@ class BulletUtils {
     }
 
     /**
-     * Returns an array of `Bullet`s which move in unison around a circular path, equally spaced.
+     * Returns a `BulletGroup` which move in unison around a circular path, equally spaced.
      * @param {function(): void} bullet - `Bullet` draw method to use for loop
      * @param {number} count - number of bullets in ring
      * @param {Victor} origin - origin of path
@@ -420,17 +467,17 @@ class BulletUtils {
      * @param {number} speed - speed of travel in degrees per second
      * @param {boolean} ccwise - counterclockwise travel toggle
      * @param {string} mode - one of `'inward'`, `'outward'`, or `'along'`.
-     * @returns array of `Bullet`s in the ring
+     * @returns `BulletGroup` of bullets in the ring
      */
     static circleGroup(bullet, count, origin, radius, startAngle, speed, ccwise, mode) {
         let bullets = [];
         for (let i = 0; i < 360; i += 360 / count) {
             bullets.push(new Bullet(
-                BulletUtils.circularTravel(origin, radius, startAngle + i, speed, ccwise, mode),
+                BulletUtils.circularTravel(new Victor(0, 0), radius, startAngle + i, speed, ccwise, mode),
                 bullet
             ));
         }
-        return bullets;
+        return new BulletGroup(bullets, (t) => BulletUtils.ORIENTPOS(origin));
     }
 
     /**
@@ -544,10 +591,11 @@ class BulletUtils {
      * @param {boolean} side - true = right, false = left
      * @param {number} wait - amount of time before shooting, in seconds
      * @param {number} bullets - number of bullets to shoot
+     * @param {number} speed - speed of bullets in pixels per second
      * @param {number} spread - spread, in degrees
      * @param {Player} player - the player.
      */
-    static Rgun(height, side, wait, bullets, spread, player) {
+    static Rgun(height, side, wait, bullets, speed, spread, player) {
         const gunpos = new Victor(side ? CANVASW - 10 : 10, height);
         const scl = new Victor(side ? 1 : -1, 1);
         const anglefind = (t) => {
@@ -584,13 +632,7 @@ class BulletUtils {
                 ctx.textBaseline = 'top';
                 ctx.fillText('r', 0, 0);
             },
-            (t) => {
-                return {
-                    pos: gunpos,
-                    rotation: DEGRAD(anglefind(t)),
-                    scale: new Victor(1, 1)
-                };
-            },
+            (t) => BulletUtils.ORIENTPOSROT(gunpos, DEGRAD(anglefind(t))),
             (t) => {
                 if (t > (wait + 0.3) * FPS) return;
 
@@ -603,7 +645,13 @@ class BulletUtils {
         );
 
         const bm = new BulletManager();
-        bm.addBullet(gun, 0, wait + bullets * 0.1 + 1);
+        bm.addBullet(gun, 0, wait + 0.6);
+
+        Object.defineProperty(bm, 'length', {
+            get: function() {
+                return wait + (CANVASW * Math.sqrt(2) / speed);
+            }
+        });
 
         bm.update = function() {
             if (this.startTime === -1) return;
@@ -615,10 +663,11 @@ class BulletUtils {
                     const angle = varRegister.Rgun;
                     const spreadAngle = angle + (0.5 - Math.random()) * spread;
                     this.addBullet(
-                        new Bullet(BulletUtils.linearTravel(gunpos, spreadAngle, 600),
+                        new Bullet(
+                            BulletUtils.linearTravel(gunpos, spreadAngle, speed),
                             BulletUtils.DIAMOND
                         ),
-                    wait + 0.1, wait + 2);
+                    wait + 0.1, wait + CANVASW * Math.sqrt(2) / speed);
                 }
             }
         };

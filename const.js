@@ -40,3 +40,7 @@ const DEGRAD = (x) => Math.PI * x / 180;
  * Converts from radians to degrees.
  */
 const RADDEG = (x) => 180 * x / Math.PI;
+/**
+ * Adds 180 to angle.
+ */
+const FLIPANGLE = (x) => (180 + x) % 360;

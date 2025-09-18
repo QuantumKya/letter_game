@@ -620,11 +620,24 @@ class BulletUtils {
                 return varRegister.Rgun;
             }
         };
+        const posfind = (t) => {
+            if (t < 0.2 * FPS) {
+                const osc = Math.sin((t - 0.2 * FPS) / (0.2 * FPS) * (Math.PI / 2));
+                return new Victor(osc * (side ? -80 : 80), 0);
+            }
+
+            if (t > (wait + 0.5) * FPS && t <= (wait + 0.7) * FPS) {
+                const osc = -Math.cos((t - (wait + 0.5) * FPS) / (0.2 * FPS) * (Math.PI / 2));
+                return new Victor((1 + osc) * (side ? 80 : -80), 0);
+            }
+            
+            return new Victor(0, 0);
+        };
 
         const gun = new WarnedBullet(
             (t) => {
                 return {
-                    pos: gunpos,
+                    pos: gunpos.clone().add(posfind(t)),
                     rotation: DEGRAD(!side ? -anglefind(t) + 90 : (360 - (-anglefind(t) + 90)) % 360),
                     scale: scl
                 };
@@ -637,7 +650,7 @@ class BulletUtils {
             },
             (t) => BulletUtils.ORIENTPOSROT(gunpos, DEGRAD(anglefind(t))),
             (t) => {
-                if (t > (wait + 0.3) * FPS) return;
+                if (t > (wait + 0.15) * FPS || t < 0.2 * FPS) return;
 
                 ctx.strokeStyle = 'red';
                 ctx.beginPath();
@@ -648,7 +661,7 @@ class BulletUtils {
         );
 
         const bm = new BulletManager();
-        bm.addBullet(gun, 0, wait + 0.6);
+        bm.addBullet(gun, 0, wait + 0.7);
 
         Object.defineProperty(bm, 'length', {
             get: function() {
@@ -667,7 +680,9 @@ class BulletUtils {
                     const spreadAngle = angle + (0.5 - Math.random()) * spread;
                     this.addBullet(
                         new Bullet(
-                            BulletUtils.linearTravel(gunpos, spreadAngle, speed),
+                            BulletUtils.linearTravel(
+                                gunpos.clone().add(new Victor(70*Math.cos(DEGRAD(angle)), 70*Math.sin(DEGRAD(angle)))).add(new Victor(-10*Math.sin(DEGRAD(angle)), 10*Math.cos(DEGRAD(angle)))),
+                                spreadAngle, speed),
                             BulletUtils.DIAMOND
                         ),
                     wait + 0.1, wait + CANVASW * Math.sqrt(2) / speed);

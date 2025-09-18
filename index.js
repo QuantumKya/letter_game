@@ -65,7 +65,7 @@ const Battack = (count) => [...Array(count).keys()].map(
 
 
 const Rguns = (count) => [...Array(count).keys()].map(
-    (i) => BulletUtils.Rgun(100 + Math.random() * (600 - 100), Math.random() > 0.5, 0.75, 3, 600, 10, player)
+    (i) => BulletUtils.Rgun(100 + Math.random() * (600 - 100), Math.random() > 0.5, 0.7, 3, 600, 10, player)
 );
 
 

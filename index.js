@@ -12,15 +12,39 @@ ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 const player = new Player();
 
+const Oradius = 200;
+const Obegin = 5;
+const Oend = 45;
 let Osupport = BulletUtils.circleGroup(
     BulletUtils.CIRCLE,
     25,
     new Victor(CANVASW / 2, CANVASH / 2),
-    200,
+    Oradius,
     0, 100, true,
     'inward'
 );
-
+const Omv = Osupport.moveInst;
+Osupport.moveInst = (t) => {
+    let scl = 1;
+    if (t < 1.5 * FPS) {
+        const f = -Math.sin((Math.PI / 2) * (t / (1.5 * FPS)));
+        scl = 1 + (CANVASW + 200) / Oradius * (1 + f);
+    }
+    else if (t < (Oend - Obegin - 1.5) * FPS) {
+        scl = 1;
+    }
+    else {
+        const f = -Math.cos((Math.PI / 2) * ((t - (Oend - Obegin - 1.5) * FPS) / (1.5 * FPS)));
+        scl = 1 + (CANVASW + 200) / Oradius * (1 + f);
+    }
+    
+    const or = Omv(t);
+    return {
+        pos: or.pos,
+        rotation: or.rotation,
+        scale: new Victor(scl, scl)
+    };
+}
 
 let bulletManager = new BulletManager();
 

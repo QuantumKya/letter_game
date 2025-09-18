@@ -280,17 +280,19 @@ class BulletGroup {
     }
 
     update() {
+        if (this.startTime === -1) return;
         this.orientation = this.moveInst(CURRENTFRAME - this.startTime);
-        for (const blt of this.bullets) blt.update();
+        for (const blt of this.bullets) blt.orientation = blt.moveInst(CURRENTFRAME - blt.startTime);
+        this.draw();
     }
 
     draw() {
         ctx.save();
 
         const { pos: p, rotation: r, scale: s } = this.orientation;
-        ctx.translate(this.orientation.pos.x, this.orientation.pos.y);
+        ctx.translate(p.x, p.y);
         ctx.scale(s.x, s.y);
-        ctx.rotate(DEGRAD(r));
+        ctx.rotate(r);
 
         for (const blt of this.bullets) blt.draw();
         ctx.restore();
@@ -298,6 +300,7 @@ class BulletGroup {
 
     start() {
         this.startTime = CURRENTFRAME;
+        for (const blt of this.bullets) blt.start();
     }
 }
 
@@ -473,11 +476,11 @@ class BulletUtils {
         let bullets = [];
         for (let i = 0; i < 360; i += 360 / count) {
             bullets.push(new Bullet(
-                BulletUtils.circularTravel(new Victor(0, 0), radius, startAngle + i, speed, ccwise, mode),
+                BulletUtils.circularTravel(new Victor(0, 0), radius, i, speed, ccwise, mode),
                 bullet
             ));
         }
-        return new BulletGroup(bullets, (t) => BulletUtils.ORIENTPOS(origin));
+        return new BulletGroup(bullets, (t) => BulletUtils.ORIENTPOSROT(origin, startAngle));
     }
 
     /**

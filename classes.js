@@ -693,3 +693,76 @@ class BulletUtils {
         return bm;
     }
 }
+
+/* Text Making */
+
+class TextObject {
+    /**
+     * 
+     * @param {string} text 
+     * @param {number} start 
+     * @param {number} end 
+     */
+    constructor(text, start, end) {
+        this.text = text;
+        this.start = start;
+        this.end = end;
+
+        this.position = new Victor(0, 0);
+
+        this.letterMove = BulletUtils.ORIENTZERO;
+        this.fontSize = 64;
+        this.spacing = 8;
+        this.spelled = false;
+        this.spellSpd = -1;
+    }
+
+    update() {
+        if (CURRENTFRAME < this.start * FPS || CURRENTFRAME > this.end * FPS) return;
+        this.draw();
+    }
+
+    draw() {
+        ctx.save();
+
+        ctx.translate(this.position.x, this.position.y);
+
+        ctx.font = `${this.fontSize}px Roboto`;
+        ctx.textBaseline = 'middle';
+        
+        this.text.split('').forEach((char, i) => {
+            if (this.spelled) if (CURRENTFRAME - this.start * FPS < FPS * (this.end - this.start) * this.spellSpd * i / this.text.length) return;
+
+            const length = (this.fontSize + this.spacing) * this.text.length - this.spacing;
+            const offset = i * (this.fontSize + this.spacing) - length / 2;
+
+            const { pos: p, rotation: r, scale: s } = this.letterMove(CURRENTFRAME - this.start * FPS);
+            ctx.translate(p.x + offset, p.y);
+            ctx.scale(s.x, s.y);
+            ctx.rotate(DEGRAD(r));
+
+            ctx.fillText(char, 0, 0);
+
+            ctx.rotate(-DEGRAD(r));
+            ctx.scale(1/s.x, 1/s.y);
+            ctx.translate(-p.x - offset, -p.y);
+        });
+
+        ctx.restore();
+    }
+
+    /**
+     * @param {Victor} position 
+     */
+    setPos(position) { this.position = position; }
+    /**
+     * @param {function(number): {pos: Victor, rotation: number, scale: Victor}} func 
+     */
+    setLetterMove(func) { this.letterMove = func; }
+    setFontSize(size) { this.fontSize = size; }
+    setSpacing(space) { this.spacing = space; }
+    /**
+     * @param {number} time letters per second
+     */
+    setSpelling(time) { this.spelled = true; this.spellSpd = time; }
+}

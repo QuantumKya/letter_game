@@ -79,6 +79,20 @@ Rguns(10).forEach((rgun, i) => bulletManager.addBM(rgun, 30 + i*1.25));
 bulletManager.start();
 
 
+const text1 = new TextObject('abc', 2, 5);
+text1.setPos(new Victor(200, 300));
+text1.setFontSize(100);
+text1.setLetterMove(() => {
+    return {
+        pos: new Victor((1 - 2*Math.random()) * 2, (1 - 2*Math.random()) * 2),
+        rotation: (1 - 2*Math.random()) * 5,
+        scale: new Victor(1, 1)
+    };
+});
+text1.setSpacing(35);
+text1.setSpelling(0.2);
+
+
 
 function animFrame() {
     const framestart = Date.now();
@@ -86,7 +100,7 @@ function animFrame() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Bullet Drawing
-    bulletManager.update();
+    //bulletManager.update();
 
     // Player Damage Check
     player.checkForWhite();
@@ -100,16 +114,11 @@ function animFrame() {
     ctx.fillStyle = 'white';
     ctx.fillText(`${player.health}/5`, 10, 680);
 
+    text1.update();
+
 
     const elapsed = Date.now() - framestart;
     if (elapsed < 1000 / FPS) setTimeout(() => { CURRENTFRAME += 1; console.log('underframe'); requestAnimationFrame(animFrame); }, 1000 / FPS - elapsed);
     else { CURRENTFRAME += 1; console.log('overframe!!!!!'); requestAnimationFrame(animFrame); }
 }
 animFrame();
-
-
-
-/* Event Listeners */
-
-
-

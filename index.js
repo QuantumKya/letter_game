@@ -1,97 +1,79 @@
+import level from './level.js';
+
 /* Canvas Setup */
 
 canvas.width = CANVASW;
 canvas.height = CANVASH;
 
+ctx.save();
 ctx.fillStyle = "rgb(255, 255, 255)";
 ctx.fillRect(0, 0, canvas.width, canvas.height);
+ctx.fillStyle = 'black';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.font = '30px monospace';
+ctx.fillText('error: something crashed at the beginning', CANVASW / 2, CANVASH / 2);
+ctx.restore();
 
 
+const shaketext = (t) => {
+    if (t % (5) === 0) {
+        varRegister.deathtemp = {
+            pos: new Victor(2*(1 - 2*Math.random()), 2*(1 - 2*Math.random())),
+            rotation: 3*(1 - 2*Math.random()),
+            scale: new Victor(1, 1)
+        };
+    }
+
+    const { pos: p, rotation: r, scale: s } = varRegister.deathtemp;
+    return BulletUtils.ORIENTPOSROT(p, r);
+}
+
+let alive = true;
+window.addEventListener('die', (event) => {
+    alive = false;
+    CURRENTFRAME = 0;
+    varRegister.deathtemp = BulletUtils.ORIENTZERO();
+
+    const deathtext = new TextObject('You lost.', 0, 0);
+    deathtext.setPos(new Victor(CANVASW / 2, CANVASH / 2));
+    deathtext.setColor('white');
+    deathtext.setFontSize(50);
+    deathtext.setSpacing(15);
+    deathtext.setSpelling(0.4);
+    deathtext.setLetterMove(shaketext);
+
+    const subm = [
+        {tx: 'Was it too hard?', tm: 0},
+        {tx: 'Sorry.', tm: 1.3},
+        {tx: 'Well, you\'ll get better.', tm: 2},
+        {tx: 'Try again.', tm: 2.8},
+        {tx: 'Aww, don\'t give up!', tm: 6}
+    ].map((sentence, i) => {
+        const dt = new TextObject(sentence.tx, 2 + sentence.tm, 0);
+        dt.setPos(new Victor(CANVASW / 2, CANVASH / 2 + 20 + 30 * (i+1)));
+        dt.setColor('white');
+        dt.setFontSize(25);
+        dt.setSpacing(5);
+        dt.setSpelling(0.4);
+        //dt.setLetterMove(shaketext);
+        return dt;
+    });
+
+    setInterval(() => {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, CANVASW, CANVASH);
+
+        for (const dt of subm) dt.draw();
+        deathtext.draw();
+        CURRENTFRAME += 1;
+    }, 1000 / 60);
+})
 
 /* Other Stuff */
 
-const player = new Player();
-
-const Oradius = 200;
-const Obegin = 5;
-const Oend = 45;
-let Osupport = BulletUtils.circleGroup(
-    BulletUtils.CIRCLE,
-    25,
-    new Victor(CANVASW / 2, CANVASH / 2),
-    Oradius,
-    0, 100, true,
-    'inward'
-);
-const Omv = Osupport.moveInst;
-Osupport.moveInst = (t) => {
-    let scl = 1;
-    if (t < 1.5 * FPS) {
-        const f = -Math.sin((Math.PI / 2) * (t / (1.5 * FPS)));
-        scl = 1 + (CANVASW + 200) / Oradius * (1 + f);
-    }
-    else if (t < (Oend - Obegin - 1.5) * FPS) {
-        scl = 1;
-    }
-    else {
-        const f = -Math.cos((Math.PI / 2) * ((t - (Oend - Obegin - 1.5) * FPS) / (1.5 * FPS)));
-        scl = 1 + (CANVASW + 200) / Oradius * (1 + f);
-    }
-    
-    const or = Omv(t);
-    return {
-        pos: or.pos,
-        rotation: or.rotation,
-        scale: new Victor(scl, scl)
-    };
-}
-
-let bulletManager = new BulletManager();
-
-let Isupport = BulletUtils.rainAttack(
-    BulletUtils.LINE,
-    150, CANVASW - 150,
-    250,
-    10, 15
-);
-
-const Battack = (count) => [...Array(count).keys()].map(
-    (i) => BulletUtils.explosion(
-        new Victor(200 + Math.random() * (500 - 200), 200 + Math.random() * (500 - 200)),
-        9,
-        0.5, 0.05, 0.8, 0.5
-    )
-);
-
-
-const Rguns = (count) => [...Array(count).keys()].map(
-    (i) => BulletUtils.Rgun(100 + Math.random() * (600 - 100), Math.random() > 0.5, 0.7, 3, 600, 10, player)
-);
-
-
-
-//bulletManager.addBM(Isupport, 1.5);
-Rguns(10).forEach((rgun, i) => bulletManager.addBM(rgun, 1 + i*1.25));
-bulletManager.addBullet(Osupport, 5, 45);
-Battack(20).forEach((batt, i) => bulletManager.addBullet(batt, 12 + 1.35 + i*1.25, 12 + 1.35 + i*1.25 + 1.85));
-Rguns(10).forEach((rgun, i) => bulletManager.addBM(rgun, 30 + i*1.25));
-
-bulletManager.start();
-
-
-const text1 = new TextObject('abc', 2, 5);
-text1.setPos(new Victor(200, 300));
-text1.setFontSize(100);
-text1.setLetterMove(() => {
-    return {
-        pos: new Victor((1 - 2*Math.random()) * 2, (1 - 2*Math.random()) * 2),
-        rotation: (1 - 2*Math.random()) * 5,
-        scale: new Victor(1, 1)
-    };
-});
-text1.setSpacing(35);
-text1.setSpelling(0.2);
-
+level.doStuff();
+level.player.health = 1;
 
 
 function animFrame() {
@@ -100,25 +82,25 @@ function animFrame() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Bullet Drawing
-    //bulletManager.update();
+    level.updateB();
 
     // Player Damage Check
-    player.checkForWhite();
+    level.player.checkForWhite();
 
     // Player Drawing
-    player.update();
-    player.draw();
+    level.player.update();
+    level.player.draw();
 
     // UI Drawing
     ctx.font = '50px Roboto';
     ctx.fillStyle = 'white';
-    ctx.fillText(`${player.health}/5`, 10, 680);
+    ctx.fillText(`${level.player.health}/5`, 10, CANVASH - 20);
 
-    text1.update();
+    level.updateT();
 
 
     const elapsed = Date.now() - framestart;
-    if (elapsed < 1000 / FPS) setTimeout(() => { CURRENTFRAME += 1; console.log('underframe'); requestAnimationFrame(animFrame); }, 1000 / FPS - elapsed);
-    else { CURRENTFRAME += 1; console.log('overframe!!!!!'); requestAnimationFrame(animFrame); }
+    if (elapsed < 1000 / FPS) setTimeout(() => { CURRENTFRAME += 1; console.log('underframe'); if (alive) requestAnimationFrame(animFrame); }, 1000 / FPS - elapsed);
+    else { CURRENTFRAME += 1; console.log('overframe!!!!!'); if (alive) requestAnimationFrame(animFrame); }
 }
 animFrame();

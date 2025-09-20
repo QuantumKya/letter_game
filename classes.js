@@ -158,6 +158,9 @@ class Player {
 
     takeDamage() {
         if (this.invulnerable) return;
+
+        if (this.health === 1) { const die = new CustomEvent('die'); dispatchEvent(die); return; }
+
         this.health -= 1;
         this.invulnerable = true;
         setTimeout(() => {
@@ -709,12 +712,31 @@ class TextObject {
         this.end = end;
 
         this.position = new Victor(0, 0);
+        this.color = 'white';
 
         this.letterMove = BulletUtils.ORIENTZERO;
         this.fontSize = 64;
         this.spacing = 8;
         this.spelled = false;
         this.spellSpd = -1;
+    }
+
+    get wordWidth() {
+        ctx.save();
+        ctx.font = `${this.fontSize} Roboto`;
+        const w = ctx.measureText(this.text).width;
+        ctx.restore();
+        return w;
+    }
+
+    get letterWidth() {
+        ctx.save();
+        const arr = [...this.text].map((char) => {
+            ctx.font = `${this.fontSize} Roboto`;
+            return ctx.measureText(char).width;
+        });
+        ctx.restore();
+        return arr;
     }
 
     update() {
@@ -731,16 +753,17 @@ class TextObject {
         ctx.textBaseline = 'middle';
         
         this.text.split('').forEach((char, i) => {
-            if (this.spelled) if (CURRENTFRAME - this.start * FPS < FPS * (this.end - this.start) * this.spellSpd * i / this.text.length) return;
+            if (this.spelled) if (CURRENTFRAME - this.start * FPS < FPS * this.spellSpd * i / this.text.length) return;
 
-            const length = (this.fontSize + this.spacing) * this.text.length - this.spacing;
-            const offset = i * (this.fontSize + this.spacing) - length / 2;
+            const length = this.wordWidth + this.spacing * (this.text.length - 1);
+            const offset = i * this.spacing + (i === 0 ? 0 : this.letterWidth.slice(0, i).reduce((a,b)=>a+b)) - length / 2;
 
             const { pos: p, rotation: r, scale: s } = this.letterMove(CURRENTFRAME - this.start * FPS);
             ctx.translate(p.x + offset, p.y);
             ctx.scale(s.x, s.y);
             ctx.rotate(DEGRAD(r));
 
+            ctx.fillStyle = this.color;
             ctx.fillText(char, 0, 0);
 
             ctx.rotate(-DEGRAD(r));
@@ -755,6 +778,7 @@ class TextObject {
      * @param {Victor} position 
      */
     setPos(position) { this.position = position; }
+    setColor(color) { this.color = color; }
     /**
      * @param {function(number): {pos: Victor, rotation: number, scale: Victor}} func 
      */

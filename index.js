@@ -73,7 +73,6 @@ window.addEventListener('die', (event) => {
 /* Other Stuff */
 
 level.doStuff();
-level.player.health = 1;
 
 
 function animFrame() {

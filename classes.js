@@ -695,6 +695,64 @@ class BulletUtils {
 
         return bm;
     }
+
+    static Spath(p1, p2, p3, p4, wait) {
+
+        const speed = 600;
+        const { table, length } = MathUtils.bézierArcTable(p1, p2, p3, p4, 150);
+        const traveltime = length / speed;
+
+        const path = new WarnedBullet(
+            (t) => {
+                const tp = MathUtils.bézierDistanceTo(length * t / (traveltime * FPS), { table, length });
+
+                const pos = ((t) => {
+                    if (t <= wait * FPS) {
+                        return MathUtils.bézierAt(p1, p2, p3, p4, 0);
+                    }
+                    else if (t <= (wait + traveltime + 0.2) * FPS) {
+                        return MathUtils.bézierAt(p1, p2, p3, p4, tp);
+                    }
+                    else if (t > (wait + traveltime + 0.2) * FPS) {
+                        return MathUtils.bézierAt(p1, p2, p3, p4, 1.1);
+                    }
+                })(t);
+                
+                const rot = ((t) => {
+                    if (t <= wait * FPS) return 0;
+                    else if (t <= (wait + traveltime + 0.2) * FPS) {
+                        return 90 - MathUtils.bézierDerivAt(p1, p2, p3, p4, tp).horizontalAngleDeg();
+                    }
+                    else if (t > (wait + traveltime + 0.2) * FPS) {
+                        return 90 - MathUtils.bézierDerivAt(p1, p2, p3, p4, 1).horizontalAngleDeg();
+                    }
+                    return 90 - MathUtils.bézierDerivAt(p1, p2, p3, p4, 1).horizontalAngleDeg();
+                })(t);
+
+                return BulletUtils.ORIENTPOSROT(pos, rot);
+            },
+            () => {
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('S', 0, 0);
+            },
+            BulletUtils.ORIENTZERO,
+            (t) => {
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.bezierCurveTo(p2.x, p2.y, p3.x, p3.y, p4.x, p4.y);
+                ctx.stroke();
+            }
+        );
+
+
+
+
+        const bm = new BulletManager();
+
+        bm.addBullet(path, 0, wait + traveltime + 0.2);
+        return bm;
+    }
 }
 
 /* Text Making */
@@ -716,7 +774,7 @@ class TextObject {
 
         this.letterMove = BulletUtils.ORIENTZERO;
         this.fontSize = 64;
-        this.spacing = 8;
+        this.spacing = 4;
         this.spelled = false;
         this.spellSpd = -1;
     }
@@ -789,4 +847,132 @@ class TextObject {
      * @param {number} time letters per second
      */
     setSpelling(time) { this.spelled = true; this.spellSpd = time; }
+}
+
+/* ------ Math ------ */
+
+class Bézier {
+    /**
+     * @param  {...Victor} p 
+     */
+    constructor(...p) {
+        this.pts = p;
+    }
+
+    get order() { return this.pts.length - 1; }
+
+    get derivative() {
+        const d = this.pts.map((pt, i) => {
+            if (i === this.pts.length-1) return new Victor(0, 0);
+            return this.pts[i+1].clone().subtract(pt).multiply(new Victor(this.order, this.order));
+        });
+        d.pop();
+        return d;
+    }
+}
+
+class MathUtils {
+    static nCk(n, k) {
+        if (Number.isNaN(n) || Number.isNaN(k)) return NaN;
+        if (k < 0 || k > n) return 0;
+        if (k === 0 || k === n) return 1;
+        if (k === 1 || k === n - 1) return n;
+        if (n - k < k) k = n - k;
+
+        let res = n;
+        for (let i = 2; i <= k; i++) res *= (n - i + 1) / i;
+        return Math.round(res);
+    };
+
+    static pascalArr(row) {
+        return [...Array.from(row)].map(MathUtils.nCk);
+    }
+
+    /**
+     * Get the point on a Bézier curve at time `t`.
+     * @param {Bézier} bzr - The Bézier.
+     * @param {number} t - Parametrization variable, ideally between 0 and 1.
+     * @returns Position of point on Bézier curve.
+     */
+    static bézierAt(bzr, t) {
+        const r = 1 - t;
+        
+        const px = MathUtils.pascalArr(bzr.pts.length).map((coef, i) => {
+            return coef * Math.pow(r, bzr.pts.length-i) * Math.pow(t, i) * bzr.pts[i].x;
+        });
+        const py = MathUtils.pascalArr(bzr.pts.length).map((coef, i) => {
+            return coef * Math.pow(r, bzr.pts.length-i) * Math.pow(t, i) * bzr.pts[i].y;
+        });
+        return new Victor(px, py);
+    }
+
+    /**
+     * Get the derivative of a Bézier curve at time `t`.
+     * @param {Bézier} bzr - The Bézier.
+     * @param {number} t - Parametrization variable, ideally between 0 and 1.
+     * @returns Derivative vector of Bézier curve.
+     */
+    static bézierTan = (bzr, t) => MathUtils.bézierAt(bzr.derivative, t).normalize();
+
+    static bézierLength(bzr, t) {
+        const n = 100;
+        const dt = t / n;
+        let length = 0;
+
+        for (let i = 0; i <= n; i++) {
+            const coef = (i === 0 || i === n) ? 1 : (i % 2 === 0 ? 2 : 4);
+            length += coef * MathUtils.bézierAt(bzr.derivative, i * dt).length();
+        }
+        return length * dt / 3;
+    }
+
+    /**
+     * Get the arc parametrization time table of a Bézier curve.
+     * @param {Bézier} bzr - The Bézier.
+     * @param {number} presc - Precision of length approximation.
+     * @returns 
+     */
+    static bézierArcTable(bzr, presc = 100) {
+        const table = [];
+        let tlength = 0;
+        let prevPnt = MathUtils.bézierAt(bzr, 0);
+
+        for (let i = 1; i <= presc; i++) {
+            const t = i / presc;
+            const pnt = MathUtils.bézierAt(bzr, t);
+            const seg = pnt.clone().subtract(prevPnt).length();
+            tlength += seg;
+            table.push({ t: t, length: tlength });
+            prevPnt = pnt;
+        }
+
+        return { table: table, length: tlength };
+    }
+
+    /**
+     * Get an approximation of `t` for a given distance along the curve.
+     * @param {number} dist - The distance along the Bézier curve.
+     * @param {{table: {t: number; length: number;}[]; length: number;}} arcTable - arc-length time table for Bézier curve.
+     * @returns The approximation of `t`.
+     */
+    static bézierDistanceTo(dist, arcTable) {
+        const { table, tl } = arcTable;
+
+        if (dist <= 0) return 0;
+        if (dist >= tl) return 1;
+
+        let l = 0, h = table.length - 1;
+        while (l < h) {
+            const m = Math.floor((l + h) / 2);
+            if (table[m].length < dist) l = m + 1;
+            else h = m;
+        }
+
+        const under = table[l-1] || { t: 0, length: 0 };
+        const over = table[l];
+        const seg = over.length - under.length;
+        const seginter = (dist - under.length) / seg;
+
+        return under.t + seginter * (over.t - under.t);
+    }
 }

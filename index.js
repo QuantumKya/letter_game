@@ -1,4 +1,4 @@
-import level from './level.js';
+import level from './Stest.js';
 
 /* Canvas Setup */
 

@@ -101,7 +101,7 @@ level.updateB = () => {
 }
 
 level.updateT = () => {
-    level.text1.update();
+    //level.text1.update();
 }
 
 

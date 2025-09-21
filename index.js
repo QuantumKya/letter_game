@@ -1,5 +1,3 @@
-import level from './Stest.js';
-
 /* Canvas Setup */
 
 canvas.width = CANVASW;
@@ -72,7 +70,17 @@ window.addEventListener('die', (event) => {
 
 /* Other Stuff */
 
-level.doStuff();
+const file = new URLSearchParams(window.location.search).get('level') ?? 'level';
+let level = {};
+import(`./${file}.js`)
+    .then((module) => {
+        level = module.default;
+
+        level.doStuff();
+        animFrame();
+    })
+    .catch((err) => console.error('Failed to load level:', err));
+
 
 
 function animFrame() {
@@ -102,4 +110,3 @@ function animFrame() {
     if (elapsed < 1000 / FPS) setTimeout(() => { CURRENTFRAME += 1; console.log('underframe'); if (alive) requestAnimationFrame(animFrame); }, 1000 / FPS - elapsed);
     else { CURRENTFRAME += 1; console.log('overframe!!!!!'); if (alive) requestAnimationFrame(animFrame); }
 }
-animFrame();

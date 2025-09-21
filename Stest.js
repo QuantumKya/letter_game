@@ -6,10 +6,11 @@ level.doStuff = () => {
     
     const Sattack = BulletUtils.Spath(
         new Victor(0, 600),
-        new Victor(550, 450),
-        new Victor(150, 300),
-        new Victor(700, 100),
-        0.5
+        new Victor(CANVASW + 500, 450),
+        new Victor(-500, 300),
+        new Victor(CANVASW, 100),
+        0.5,
+        8
     );
 
     const bm = new BulletManager();
@@ -18,7 +19,7 @@ level.doStuff = () => {
     const label = new TextObject('S attack test', 0.5, 0);
     label.setPos(new Victor(CANVASW / 2, 75));
     label.setFontSize(48);
-    label.setSpelling(0.2);
+    label.setSpelling(0.4);
 
     level.bm = bm;
     level.bm.start();

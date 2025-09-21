@@ -138,7 +138,7 @@ class Player {
             if (key[1].pressed) moveVec.add([LEFT, RIGHT, UP, DOWN][i]);
         });
 
-        this.vel = (moveVec.length() !== 0 ? moveVec.normalize() : moveVec).multiply(new Victor(this.speed, this.speed));
+        this.vel = (moveVec.length() !== 0 ? moveVec.normalize() : moveVec).multiplyScalar(this.speed);
         
         if (this.pos.x + this.vel.x + this.size.x > CANVASW) {
             this.vel.x = CANVASW - this.pos.x - this.size.x;
@@ -396,6 +396,14 @@ class BulletUtils {
     static LINE = () => {
         ctx.fillRect(0, 3, 30, 6);
     }
+    static TRIANGLE = () => {
+        ctx.beginPath();
+        ctx.moveTo(0, -7);
+        ctx.lineTo(0,  7);
+        ctx.lineTo(Math.sqrt(3) * 7 / 2, 0);
+        ctx.lineTo(0, -7);
+        ctx.fill();
+    }
 
     static ORIENT = (pos, rot, scl) => ({ pos: pos, rotation: rot, scale: scl });
     static ORIENTPOS = (pos) => ({ pos: pos, rotation: 0, scale: new Victor(1, 1) });
@@ -421,7 +429,7 @@ class BulletUtils {
 
     /**
      * Returns a `Bullet` movement function describing movement along a straight line.
-     * @param {Victor} pos - position from which the line starts
+     * @param {Victor} start - position from which the line starts
      * @param {number} angle - angle of line in degrees
      * @param {number} speed - speed of travel in pixels per second
      * @returns movement function for `Bullet.prototype.constructor`
@@ -674,10 +682,10 @@ class BulletUtils {
 
         bm.update = function() {
             if (this.startTime === -1) return;
-            const time = CURRENTFRAME - this.startTime;
+            const t = CURRENTFRAME - this.startTime;
             BulletManager.prototype.update.call(this);
 
-            if (time === Math.floor((wait + 0.1) * FPS)) {
+            if (t === Math.floor((wait + 0.1) * FPS)) {
                 for (let i = 0; i < bullets; i++) {
                     const angle = varRegister.Rgun;
                     const spreadAngle = angle + (0.5 - Math.random()) * spread;
@@ -696,40 +704,49 @@ class BulletUtils {
         return bm;
     }
 
-    static Spath(p1, p2, p3, p4, wait) {
+    /**
+     * @param {Victor} p1 
+     * @param {Victor} p2 
+     * @param {Victor} p3 
+     * @param {Victor} p4 
+     * @param {number} wait 
+     * @param {number} density - density of diaspora, in bullets per second.
+     * @returns 
+     */
+    static Spath(p1, p2, p3, p4, wait, density) {
+        const lebézier = new Bézier(p1, p2, p3, p4);
 
-        const speed = 600;
-        const { table, length } = MathUtils.bézierArcTable(p1, p2, p3, p4, 150);
+        const speed = 750;
+        const { table, length } = MathUtils.bézierArcTable(lebézier, 100);
         const traveltime = length / speed;
 
         const path = new WarnedBullet(
             (t) => {
-                const tp = MathUtils.bézierDistanceTo(length * t / (traveltime * FPS), { table, length });
-
                 const pos = ((t) => {
                     if (t <= wait * FPS) {
-                        return MathUtils.bézierAt(p1, p2, p3, p4, 0);
+                        return MathUtils.bézierAt(lebézier, 0);
                     }
-                    else if (t <= (wait + traveltime + 0.2) * FPS) {
-                        return MathUtils.bézierAt(p1, p2, p3, p4, tp);
+                    else if (t <= (wait + traveltime) * FPS) {
+                        const tp = MathUtils.bézierDistanceTo(length * (t - wait*FPS) / ((traveltime) * FPS), { table, length });
+                        return MathUtils.bézierAt(lebézier, tp);
                     }
-                    else if (t > (wait + traveltime + 0.2) * FPS) {
-                        return MathUtils.bézierAt(p1, p2, p3, p4, 1.1);
+                    else if (t > (wait + traveltime) * FPS) {
+                        return MathUtils.bézierAt(lebézier, 1.1);
                     }
                 })(t);
                 
                 const rot = ((t) => {
                     if (t <= wait * FPS) return 0;
-                    else if (t <= (wait + traveltime + 0.2) * FPS) {
-                        return 90 - MathUtils.bézierDerivAt(p1, p2, p3, p4, tp).horizontalAngleDeg();
+                    else if (t <= (wait + traveltime) * FPS) {
+                        const tp = MathUtils.bézierDistanceTo(length * (t - wait*FPS) / ((traveltime) * FPS), { table, length });
+                        return MathUtils.bézierTan(lebézier, tp).horizontalAngleDeg();
                     }
-                    else if (t > (wait + traveltime + 0.2) * FPS) {
-                        return 90 - MathUtils.bézierDerivAt(p1, p2, p3, p4, 1).horizontalAngleDeg();
+                    else if (t > (wait + traveltime) * FPS) {
+                        return MathUtils.bézierTan(lebézier, 1).horizontalAngleDeg();
                     }
-                    return 90 - MathUtils.bézierDerivAt(p1, p2, p3, p4, 1).horizontalAngleDeg();
                 })(t);
 
-                return BulletUtils.ORIENTPOSROT(pos, rot);
+                return BulletUtils.ORIENTPOSROT(pos, DEGRAD(rot + 90));
             },
             () => {
                 ctx.textAlign = 'center';
@@ -747,10 +764,39 @@ class BulletUtils {
 
 
 
+        const spacing = speed / density;
 
         const bm = new BulletManager();
-
+        
         bm.addBullet(path, 0, wait + traveltime + 0.2);
+
+        for (let i = spacing; i <= length; i += spacing) {
+            const tp = MathUtils.bézierDistanceTo(i, { table, length });
+            const pos = MathUtils.bézierAt(lebézier, tp);
+            const angle = MathUtils.bézierTan(lebézier, tp).horizontalAngleDeg();
+            const startTime = wait + i / length * traveltime;
+
+            const trianglespeed = 300;
+            
+            for (let p = 0; p < 2; p++) {
+                const lfunc = BulletUtils.linearTravel(pos, angle + (p === 0 ? 90 : -90), trianglespeed);
+                bm.addBullet(new Bullet(
+                    (t) => {
+                        if (t < 0) {
+                            return BulletUtils.ORIENTPOS(new Victor(-100, -100));
+                        }
+                        else if (t < 0.5 * FPS) {
+                            return lfunc(0.1);
+                        }
+                        else if (t >= 0.5) {
+                            return lfunc(t - 0.5*FPS);
+                        }
+                    },
+                    BulletUtils.TRIANGLE
+                ), startTime, startTime + CANVASW * Math.sqrt(2) / trianglespeed);
+            }
+        }
+
         return bm;
     }
 }
@@ -856,6 +902,9 @@ class Bézier {
      * @param  {...Victor} p 
      */
     constructor(...p) {
+        if (!p.every(pt => pt instanceof Victor)) {
+            throw new Error("All Bézier control points must be Victor instances");
+        }
         this.pts = p;
     }
 
@@ -864,30 +913,14 @@ class Bézier {
     get derivative() {
         const d = this.pts.map((pt, i) => {
             if (i === this.pts.length-1) return new Victor(0, 0);
-            return this.pts[i+1].clone().subtract(pt).multiply(new Victor(this.order, this.order));
+            return this.pts[i+1].clone().subtract(pt).multiplyScalar(this.order);
         });
         d.pop();
-        return d;
+        return new Bézier(...d);
     }
 }
 
 class MathUtils {
-    static nCk(n, k) {
-        if (Number.isNaN(n) || Number.isNaN(k)) return NaN;
-        if (k < 0 || k > n) return 0;
-        if (k === 0 || k === n) return 1;
-        if (k === 1 || k === n - 1) return n;
-        if (n - k < k) k = n - k;
-
-        let res = n;
-        for (let i = 2; i <= k; i++) res *= (n - i + 1) / i;
-        return Math.round(res);
-    };
-
-    static pascalArr(row) {
-        return [...Array.from(row)].map(MathUtils.nCk);
-    }
-
     /**
      * Get the point on a Bézier curve at time `t`.
      * @param {Bézier} bzr - The Bézier.
@@ -895,15 +928,15 @@ class MathUtils {
      * @returns Position of point on Bézier curve.
      */
     static bézierAt(bzr, t) {
-        const r = 1 - t;
-        
-        const px = MathUtils.pascalArr(bzr.pts.length).map((coef, i) => {
-            return coef * Math.pow(r, bzr.pts.length-i) * Math.pow(t, i) * bzr.pts[i].x;
-        });
-        const py = MathUtils.pascalArr(bzr.pts.length).map((coef, i) => {
-            return coef * Math.pow(r, bzr.pts.length-i) * Math.pow(t, i) * bzr.pts[i].y;
-        });
-        return new Victor(px, py);
+        const pts = bzr.pts.map(pt => pt.clone());
+
+        for (let r = 1; r <= bzr.pts.length; r++) {
+            for (let i = 0; i < bzr.pts.length - r; i++) {
+                pts[i].multiplyScalar(1-t).add(pts[i+1].clone().multiplyScalar(t));
+            }
+        }
+
+        return pts[0];
     }
 
     /**

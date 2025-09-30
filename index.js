@@ -53,7 +53,7 @@ window.addEventListener('die', (event) => {
         dt.setColor('white');
         dt.setFontSize(25);
         dt.setSpacing(5);
-        dt.setSpelling(0.4);
+        dt.setSpelling(0.15);
         //dt.setLetterMove(shaketext);
         return dt;
     });
@@ -72,9 +72,11 @@ window.addEventListener('die', (event) => {
 
 const file = new URLSearchParams(window.location.search).get('level') ?? 'level';
 let level = {};
-import(`./${file}.js`)
+import(`./levels/${file}.js`)
     .then((module) => {
         level = module.default;
+
+        document.getElementById('wordtext').innerHTML = `Word:<br><strong>${level.name}</strong`;
 
         level.doStuff();
         animFrame();

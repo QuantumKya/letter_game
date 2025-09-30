@@ -674,32 +674,18 @@ class BulletUtils {
         const bm = new BulletManager();
         bm.addBullet(gun, 0, wait + 0.7);
 
-        Object.defineProperty(bm, 'length', {
-            get: function() {
-                return wait + (CANVASW * Math.sqrt(2) / speed);
-            }
-        });
-
-        bm.update = function() {
-            if (this.startTime === -1) return;
-            const t = CURRENTFRAME - this.startTime;
-            BulletManager.prototype.update.call(this);
-
-            if (t === Math.floor((wait + 0.1) * FPS)) {
-                for (let i = 0; i < bullets; i++) {
-                    const angle = varRegister.Rgun;
-                    const spreadAngle = angle + (0.5 - Math.random()) * spread;
-                    this.addBullet(
-                        new Bullet(
-                            BulletUtils.linearTravel(
-                                gunpos.clone().add(new Victor(70*Math.cos(DEGRAD(angle)), 70*Math.sin(DEGRAD(angle)))).add(new Victor(-10*Math.sin(DEGRAD(angle)), 10*Math.cos(DEGRAD(angle)))),
-                                spreadAngle, speed),
-                            BulletUtils.DIAMOND
-                        ),
-                    wait + 0.1, wait + CANVASW * Math.sqrt(2) / speed);
-                }
-            }
-        };
+        for (let i = 0; i < bullets; i++) {
+            const angle = getRgunHelper();
+            const spreadAngle = angle + (0.5 - Math.random()) * spread;
+            bm.addBullet(
+                new Bullet(
+                    BulletUtils.linearTravel(
+                        gunpos.clone().add(new Victor(70*Math.cos(DEGRAD(angle)), 70*Math.sin(DEGRAD(angle)))).add(new Victor(-10*Math.sin(DEGRAD(angle)), 10*Math.cos(DEGRAD(angle)))),
+                        spreadAngle, speed),
+                    BulletUtils.DIAMOND
+                ),
+            wait + 0.1, wait + CANVASW * Math.sqrt(2) / speed);
+        }
 
         return bm;
     }
@@ -801,6 +787,8 @@ class BulletUtils {
     }
 }
 
+const getRgunHelper = () => { return varRegister.Rgun; }
+
 /* Text Making */
 
 class TextObject {
@@ -857,12 +845,12 @@ class TextObject {
         ctx.textBaseline = 'middle';
         
         this.text.split('').forEach((char, i) => {
-            if (this.spelled) if (CURRENTFRAME - this.start * FPS < FPS * this.spellSpd * i / this.text.length) return;
+            if (this.spelled) if (CURRENTFRAME - this.start * FPS < FPS * this.spellSpd * i) return;
 
             const length = this.wordWidth + this.spacing * (this.text.length - 1);
             const offset = i * this.spacing + (i === 0 ? 0 : this.letterWidth.slice(0, i).reduce((a,b)=>a+b)) - length / 2;
 
-            const { pos: p, rotation: r, scale: s } = this.letterMove(CURRENTFRAME - this.start * FPS);
+            const { pos: p, rotation: r, scale: s } = this.letterMove(CURRENTFRAME - (this.start + this.spellSpd * i) * FPS);
             ctx.translate(p.x + offset, p.y);
             ctx.scale(s.x, s.y);
             ctx.rotate(DEGRAD(r));

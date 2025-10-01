@@ -4,6 +4,8 @@ inspired by Undertale battle bullet patterns
 Each letter is ready to throw all it has at you!!! Dodge their attacks!
 They'll team up into words (gangs of letters) and attack together, too!
 
+Use WASD or arrow keys to move. Your health is displayed in the bottom right corner.
+
 This is in Demo form!!! Right now, there's only one level. Play it [here](https://quantumkya.github.io/letter_game/?level=bros).
 
 Example:

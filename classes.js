@@ -799,6 +799,42 @@ class BulletUtils {
 
         return bm;
     }
+
+    static Lwall(attack, sustain, decay, speed) {
+        return new Bullet(
+            (t) => {
+                const scl = ((t) => {
+                    if (t < 0.35 * FPS) {
+                        const factor = Math.sin(Math.PI / 2 * t / (0.35 * FPS));
+                        return new Victor(factor, factor);
+                    }
+                    if (t < (0.35 + attack) * FPS) {
+                        const factor = 1 + CANVASH * Math.sin(Math.PI / 2 * (t - 0.35 * FPS) / (attack * FPS));
+                        return new Victor(factor / CANVASH * 2.5, factor);
+                    }
+                    if (t < (0.35 + attack + sustain) * FPS) {
+                        return new Victor(2.5, CANVASH);
+                    }
+                    if (t < (0.35 + attack + sustain + decay) * FPS) {
+                        const factor = CANVASH * Math.cos(Math.PI / 2 * (t - (0.35 + attack + sustain) * FPS) / (decay * FPS));
+                        return new Victor(factor / CANVASH * 2.5, factor);
+                    }
+                    else return new Victor(1, 1);
+                })(t);
+
+                return {
+                    pos: new Victor(CANVASW / 2, CANVASH / 2),
+                    rotation: speed * (t / FPS),
+                    scale: scl
+                };
+            },
+            () => {
+                ctx.textBaseline = 'bottom';
+                ctx.textAlign = 'center';
+                ctx.fillText('L', 0, 0);
+            }
+        )
+    }
 }
 
 const getRgunHelper = () => { return varRegister.Rgun; }

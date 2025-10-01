@@ -317,7 +317,16 @@ class BulletManager {
     get length() {
         let max = 0;
         for (const blt of this.pattern) {
-            max = Math.max(max, blt.end);
+            max += blt.start + blt.end;
+        }
+        return max;
+    }
+
+    lengthon(i) {
+        let max = 0;
+        for (let k = 0; k < i; k++) {
+            const blt = this.pattern[i];
+            max += blt.start + blt.end;
         }
         return max;
     }
@@ -326,7 +335,7 @@ class BulletManager {
         if (this.startTime === -1) return;
 
         const time = CURRENTFRAME - this.startTime;
-        for (const b of this.pattern) {
+        this.pattern.forEach((b) => {
             if (time >= b.start * FPS && time <= b.end * FPS) {
                 if (Array.isArray(b.bullet)) {
                     for (const bullet of b.bullet) {
@@ -347,7 +356,7 @@ class BulletManager {
                     b.bullet.update();
                 }
             }
-        }
+        });
     }
 
     /**
@@ -675,13 +684,18 @@ class BulletUtils {
         bm.addBullet(gun, 0, wait + 0.7);
 
         for (let i = 0; i < bullets; i++) {
-            const angle = getRgunHelper();
-            const spreadAngle = angle + (0.5 - Math.random()) * spread;
+            const spreadd = (0.5 - Math.random()) * spread;
+
             bm.addBullet(
                 new Bullet(
-                    BulletUtils.linearTravel(
-                        gunpos.clone().add(new Victor(70*Math.cos(DEGRAD(angle)), 70*Math.sin(DEGRAD(angle)))).add(new Victor(-10*Math.sin(DEGRAD(angle)), 10*Math.cos(DEGRAD(angle)))),
-                        spreadAngle, speed),
+                    (t) => {
+                        const angle = getRgunHelper();
+                        const spreadAngle = angle + spreadd;
+
+                        return BulletUtils.linearTravel(
+                            gunpos.clone().add(new Victor(70*Math.cos(DEGRAD(angle)), 70*Math.sin(DEGRAD(angle)))).add(new Victor(-10*Math.sin(DEGRAD(angle)), 10*Math.cos(DEGRAD(angle)))),
+                            spreadAngle, speed)(t);
+                    },
                     BulletUtils.DIAMOND
                 ),
             wait + 0.1, wait + CANVASW * Math.sqrt(2) / speed);
@@ -806,6 +820,7 @@ class TextObject {
         this.position = new Victor(0, 0);
         this.color = 'white';
 
+        this.textMove = BulletUtils.ORIENTZERO;
         this.letterMove = BulletUtils.ORIENTZERO;
         this.fontSize = 64;
         this.spacing = 4;
@@ -843,14 +858,20 @@ class TextObject {
 
         ctx.font = `${this.fontSize}px Roboto`;
         ctx.textBaseline = 'middle';
+
+        const { pos: tp, rotation: tr, scale: ts } = this.textMove(CURRENTFRAME - (this.start) * FPS);
+
+        ctx.translate(tp.x, tp.y);
+        ctx.scale(ts.x, ts.y);
+        ctx.rotate(DEGRAD(tr));
         
         this.text.split('').forEach((char, i) => {
-            if (this.spelled) if (CURRENTFRAME - this.start * FPS < FPS * this.spellSpd * i) return;
+            if (this.spelled) if (CURRENTFRAME - this.start * FPS < FPS * i / this.spellSpd) return;
 
             const length = this.wordWidth + this.spacing * (this.text.length - 1);
             const offset = i * this.spacing + (i === 0 ? 0 : this.letterWidth.slice(0, i).reduce((a,b)=>a+b)) - length / 2;
 
-            const { pos: p, rotation: r, scale: s } = this.letterMove(CURRENTFRAME - (this.start + this.spellSpd * i) * FPS);
+            const { pos: p, rotation: r, scale: s } = this.letterMove(CURRENTFRAME - (this.start + (this.spellSpd === -1 ? 0 : i / this.spellSpd)) * FPS);
             ctx.translate(p.x + offset, p.y);
             ctx.scale(s.x, s.y);
             ctx.rotate(DEGRAD(r));
@@ -863,6 +884,10 @@ class TextObject {
             ctx.translate(-p.x - offset, -p.y);
         });
 
+        ctx.rotate(-DEGRAD(tr));
+        ctx.scale(1/ts.x, 1/ts.y);
+        ctx.translate(-tp.x, -tp.y);
+
         ctx.restore();
     }
 
@@ -871,6 +896,10 @@ class TextObject {
      */
     setPos(position) { this.position = position; }
     setColor(color) { this.color = color; }
+    /**
+     * @param {function(number): {pos: Victor, rotation: number, scale: Victor}} func 
+     */
+    setTextMove(func) { this.textMove = func; }
     /**
      * @param {function(number): {pos: Victor, rotation: number, scale: Victor}} func 
      */

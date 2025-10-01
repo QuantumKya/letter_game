@@ -28,6 +28,7 @@ const shaketext = (t) => {
 }
 
 let alive = true;
+let yeslevel = true;
 window.addEventListener('die', (event) => {
     alive = false;
     CURRENTFRAME = 0;
@@ -38,7 +39,7 @@ window.addEventListener('die', (event) => {
     deathtext.setColor('white');
     deathtext.setFontSize(50);
     deathtext.setSpacing(15);
-    deathtext.setSpelling(0.4);
+    deathtext.setSpelling(15);
     deathtext.setLetterMove(shaketext);
 
     const subm = [
@@ -53,7 +54,7 @@ window.addEventListener('die', (event) => {
         dt.setColor('white');
         dt.setFontSize(25);
         dt.setSpacing(5);
-        dt.setSpelling(0.15);
+        dt.setSpelling(25);
         //dt.setLetterMove(shaketext);
         return dt;
     });
@@ -65,8 +66,27 @@ window.addEventListener('die', (event) => {
         for (const dt of subm) dt.draw();
         deathtext.draw();
         CURRENTFRAME += 1;
-    }, 1000 / 60);
-})
+    }, 1000 / FPS);
+});
+window.addEventListener('nolevel', (event) => {
+    yeslevel = false;
+
+    const failtext = new TextObject('That\'s not a level, sorry.', 0, 0);
+    failtext.setPos(new Victor(CANVASW / 2, CANVASH / 2));
+    failtext.setColor('white');
+    failtext.setFontSize(36);
+    failtext.setSpacing(7);
+    failtext.setSpelling(10);
+    failtext.setLetterMove((t) => BulletUtils.ORIENTPOSROT(new Victor(0, 0), 10));
+
+    setInterval(() => {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, CANVASW, CANVASH);
+
+        failtext.draw();
+        CURRENTFRAME += 1;
+    }, 1000 / FPS);
+});
 
 /* Other Stuff */
 
@@ -81,7 +101,11 @@ import(`./levels/${file}.js`)
         level.doStuff();
         animFrame();
     })
-    .catch((err) => console.error('Failed to load level:', err));
+    .catch((err) => {
+        const levelfail = new CustomEvent('nolevel');
+        dispatchEvent(levelfail);
+        console.error('Failed to load level:', err);
+    });
 
 
 

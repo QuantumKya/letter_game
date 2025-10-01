@@ -19,7 +19,7 @@ level.doStuff = () => {
     const label = new TextObject('S attack test', 0.5, 0);
     label.setPos(new Victor(CANVASW / 2, 75));
     label.setFontSize(48);
-    label.setSpelling(0.4);
+    label.setSpelling(8);
 
     level.bm = bm;
     level.bm.start();

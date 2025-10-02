@@ -44,3 +44,39 @@ const RADDEG = (x) => 180 * x / Math.PI;
  * Adds 180 to angle.
  */
 const FLIPANGLE = (x) => (180 + x) % 360;
+
+
+const wavetext = (n, time) => {
+    const wtext = new TextObject(`Wave ${n}`, time+0.2, time+1.8);
+    wtext.setPos(new Victor(CANVASW/2, CANVASH/2));
+    wtext.setFontSize(100);
+    wtext.setSpacing(20);
+    wtext.setLetterMove(textf);
+    wtext.setSpelling(10);
+
+    return wtext;
+}
+const textf = (t) => {
+    const scl = ((t) => {
+        if (t <= (0.25) * FPS) {
+            return new Victor(1, 1).multiplyScalar(1 + 0.5 * ((0.25 * FPS) - t));
+        }
+        if (t > 1.75 * FPS) {
+            return new Victor(1, 1).multiplyScalar((0.25 * FPS) - t);
+        }
+        else return new Victor(1, 1);
+    })(t);
+
+    const pos = ((t) => {
+        if (t >= (0.25) * FPS) {
+            return new Victor(10*Math.cos(10 * (Math.PI / 2) * (t - (0.25)*FPS) / ((4-0.25)*FPS)), 0);
+        }
+        else return new Victor(0, 0);
+    })(t);
+
+    return {
+        pos: pos,
+        rotation: 0,
+        scale: scl
+    };
+};

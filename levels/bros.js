@@ -14,7 +14,6 @@ const level = {
 
         let bmw1 = new BulletManager();
 
-        //bulletManager.addBM(Isupport, 1.5);
         for (let i = 0; i < 10; i++) {
             const rgun = BulletUtils.Rgun(100 + Math.random() * (600 - 100), Math.random() > 0.5, 0.6, 3, 450, 15, level.player);
             bmw1.addBM(rgun, i*1.25);
@@ -89,7 +88,7 @@ const level = {
 
         const wave1text = wavetext(1, 0);
         const wave2text = wavetext(2, 17);
-        const wintext = new TextObject('You Win!', 30, 50);
+        const wintext = new TextObject('You Win!', 30, 100);
         wintext.setPos(new Victor(CANVASW/2, CANVASH/2));
         wintext.setFontSize(100);
         wintext.setSpacing(20);

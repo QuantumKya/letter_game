@@ -8,19 +8,28 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Code:ital,wght@0,300..800;1,300..800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-    
-    <script src="victor.min.js"></script>
-    <script defer src="classes.js"></script>
-    <script defer src="const.js"></script>
-    <script defer src="index.js" type="module"></script>
 
-    <title>Letter game</title>
+    <title>Level Select - Letter Game</title>
+
+    <style>
+        .menu-button {
+            background-color: #333;
+            border: 3px black;
+        }
+    </style>
 </head>
 <body>
 
-    <p style="position: absolute; left: 0; top: 0; padding-left: 15px; color: white; font-family: Roboto; font-size: 300%;" id="wordtext"></p>
+    <div style="text-align: center;">
 
-    <canvas style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); image-rendering: pixelated;"></canvas>
+        <h2>Fight which letter?</h2>
+
+        <a class="menu-button" href="./index.html?level=bros">BROS</a>
+        <a class="menu-button" href="./index.html?level=silo">SILO</a>
+
+        <p>A game about dodging letters as they attack you!!! They form dangerous gangs called "words"! They'll come at you in waves – each member of the word showing off its strengths.</p>
+
+    </div>
 
 </body>
 </html>

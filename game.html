@@ -14,27 +14,13 @@
     <script defer src="const.js"></script>
     <script defer src="index.js" type="module"></script>
 
-    <title>Level Select - Letter Game</title>
-
-    <style>
-        .menu-button {
-            background-color: #333;
-
-        }
-    </style>
+    <title>Letter game</title>
 </head>
 <body>
 
-    <div style="text-align: center;">
+    <p style="position: absolute; left: 0; top: 0; padding-left: 15px; color: white; font-family: Roboto; font-size: 300%;" id="wordtext"></p>
 
-        <h2>Fight which letter?</h2>
-
-        <button class="menu-button" onclick="() => document.getElementById('link1').click()">RIBS</button>
-        <a href="/game.html" id="link1" style="display: none;"></a>
-
-        <button class="menu-button">BROS</button>
-
-    </div>
+    <canvas style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); image-rendering: pixelated;"></canvas>
 
 </body>
 </html>

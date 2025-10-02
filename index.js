@@ -76,7 +76,6 @@ window.addEventListener('nolevel', (event) => {
     failtext.setColor('white');
     failtext.setFontSize(36);
     failtext.setSpacing(7);
-    failtext.setSpelling(10);
     failtext.setLetterMove((t) => BulletUtils.ORIENTPOSROT(new Victor(0, 0), 10));
 
     setInterval(() => {

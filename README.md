@@ -1,18 +1,17 @@
-# Letter-Dodging Game
-inspired by Undertale battle bullet patterns
+# Letter Game (Name is WIP)
+inspired heavily by Undertale battle bullet patterns
 
-Each letter is ready to throw all it has at you!!! Dodge their attacks!
-They'll team up into words (gangs of letters) and attack together, too!
+A game about dodging letters as they attack you!!! They form dangerous gangs called "words"!
+They'll come at you in waves – each member of the word showing off its strengths.
+
+This is essentially a very short demo! Right now, there're only two levels.
+
+## Controls
 
 Use WASD or arrow keys to move. Your health is displayed in the bottom right corner.
 
-This is in Demo form!!! Right now, there's only one level. Play it [here](https://quantumkya.github.io/letter_game/?level=bros).
 
-Example:
-The letters P and B like to be ex-plosive
-
-
-## Possible Titles (I haven't decided)
+### Possible Titles (I haven't decided)
 - Skillful Skimming
 - Bulliterate Hell
 - Alphabet Attack
@@ -21,7 +20,8 @@ The letters P and B like to be ex-plosive
 
 
 
-## Pun Corner
-Your little square will get some real lex-ercise dodging these!
-Things may get sen-tense.
-I could only escape by the edge of my suffix!
+### Pun Corner
+- Your little square will get some real lex-ercise dodging these!
+- Things may get sen-tense.
+- I could only escape by the edge of my suffix!
+- The letters P and B like to be ex-plosive.

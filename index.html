@@ -12,22 +12,51 @@
     <title>Level Select - Letter Game</title>
 
     <style>
+        body {
+            font-family: Roboto;
+            color: white;
+            background-color: #232323;
+            font-weight: 500;
+        }
+
         .menu-button {
-            background-color: #333;
+            background-color: #333333;
+            border-radius: 15px;
             border: 3px black;
+            padding: 10px;
+            font-size: 200%;
+        }
+
+        .menu-button a {
+            text-decoration: none;
+            color: white;
         }
     </style>
 </head>
 <body>
 
-    <div style="text-align: center;">
+    <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+        <div style="display: flex; flex-direction: row; position: relative;">
+            <img src="lettergamelogo.png" alt="Letter Game Logo" style="height: 300px; image-rendering: pixelated; pointer-events: none;">
+            <p style="position: absolute; align-self: flex-end; right: -120px; font-style: oblique;">by quantumKya</p>
+        </div>
+        <h1 style="font-size: 300%;">Level Select</h1>
 
-        <h2>Fight which letter?</h2>
+        <p style="font-weight: 800; font-size: larger; margin-top: -10px;">Which word will you fight?</p>
 
-        <a class="menu-button" href="./index.html?level=bros">BROS</a>
-        <a class="menu-button" href="./index.html?level=silo">SILO</a>
+        <div style="display: flex; flex-direction: row; gap: 30px;">
+            <span>
+            <button class="menu-button"><a href="./game.html?level=bros">BROS</a></button>
+            <p>2 waves, easy</p>
+            </span>
+            <div style="width: 6px; background-color: #555555; border-radius: 10px;"></div>
+            <span>
+            <button class="menu-button"><a href="./game.html?level=silo">SILO</a></button>
+            <p>3 waves, hard</p>
+            </span>
+        </div>
 
-        <p>A game about dodging letters as they attack you!!! They form dangerous gangs called "words"! They'll come at you in waves – each member of the word showing off its strengths.</p>
+        <p style="max-width: 400px;">A game about dodging letters as they attack you!!! They form dangerous gangs called "words"! They'll come at you in waves – each member of the word showing off its strengths.</p>
 
     </div>
 

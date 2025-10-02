@@ -4,10 +4,19 @@ const level = {
 
 level.doStuff = () => {
     
-    const Lattack = BulletUtils.Lwall(1, 9.5, 0.5, 90);
+    const Lbarrage = (count) => [...Array(count).keys()].map(
+        (i) => {
+            const tf = Math.random() > 0.5;
+            const [p1, p2] = [0, 1].map(a => {
+                if (a) return tf ? new Victor(0, 150 + Math.random()*(CANVASH-150)) : new Victor(CANVASW, 150 + Math.random()*(CANVASH-150));
+                else return tf ? new Victor(CANVASW, 150 + Math.random()*(CANVASH-150)) : new Victor(0, 150 + Math.random()*(CANVASH-150));
+            });
+            return BulletUtils.Ldash(0.4, p1, p2, 1400);
+        }
+    );
 
     const bm = new BulletManager();
-    bm.addBM(Lattack, 2);
+    Lbarrage(5).forEach((blt, i) => bm.addBullet(blt, 0.5 + 1*i, 3 + 1*i));
 
     const label = new TextObject('L attack test', 0.5, 0);
     label.setPos(new Victor(CANVASW / 2, 75));

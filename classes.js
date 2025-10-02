@@ -800,38 +800,42 @@ class BulletUtils {
         return bm;
     }
 
-    static Lwall(attack, sustain, decay, speed) {
-        return new Bullet(
+    /**
+     * 
+     * @param {number} wait 
+     * @param {Victor} p1 
+     * @param {number} speed 
+     * @param {Player} player 
+     * @returns 
+     */
+    static Ldash(wait, p1, p2, speed) {
+        const pathdistance = p1.clone().subtract(p2).length();
+        const projpoint = MathUtils.lerp(p1, p2, speed / pathdistance);
+
+        return new WarnedBullet(
             (t) => {
-                const scl = ((t) => {
-                    if (t < 0.35 * FPS) {
-                        const factor = Math.sin(Math.PI / 2 * t / (0.35 * FPS));
-                        return new Victor(factor, factor);
-                    }
-                    if (t < (0.35 + attack) * FPS) {
-                        const factor = 1 + CANVASH * Math.sin(Math.PI / 2 * (t - 0.35 * FPS) / (attack * FPS));
-                        return new Victor(factor / CANVASH * 2.5, factor);
-                    }
-                    if (t < (0.35 + attack + sustain) * FPS) {
-                        return new Victor(2.5, CANVASH);
-                    }
-                    if (t < (0.35 + attack + sustain + decay) * FPS) {
-                        const factor = CANVASH * Math.cos(Math.PI / 2 * (t - (0.35 + attack + sustain) * FPS) / (decay * FPS));
-                        return new Victor(factor / CANVASH * 2.5, factor);
-                    }
-                    else return new Victor(1, 1);
+                const pos = ((t) => {
+                    if (t < wait * FPS) return p1.clone();
+                    else return MathUtils.lerp(p1, projpoint, (t-wait*FPS)/FPS);
                 })(t);
 
                 return {
-                    pos: new Victor(CANVASW / 2, CANVASH / 2),
-                    rotation: speed * (t / FPS),
-                    scale: scl
+                    pos: pos,
+                    rotation: projpoint.clone().subtract(p1).horizontalAngle() + Math.PI / 2,
+                    scale: new Victor(2, 2)
                 };
             },
             () => {
-                ctx.textBaseline = 'bottom';
+                ctx.textBaseline = 'middle';
                 ctx.textAlign = 'center';
                 ctx.fillText('L', 0, 0);
+            },
+            BulletUtils.ORIENTZERO,
+            (t) => {
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
             }
         )
     }
@@ -975,6 +979,17 @@ class Bézier {
 
 class MathUtils {
     /**
+     * Lerp between two points.
+     * @param {Victor} p1 
+     * @param {Victor} p2 
+     * @param {number} t 
+     * @returns 
+     */
+    static lerp(p1, p2, t) {
+        return p1.clone().multiplyScalar(1-t).add(p2.clone().multiplyScalar(t));
+    }
+    
+    /**
      * Get the point on a Bézier curve at time `t`.
      * @param {Bézier} bzr - The Bézier.
      * @param {number} t - Parametrization variable, ideally between 0 and 1.
@@ -1062,3 +1077,37 @@ class MathUtils {
         return under.t + seginter * (over.t - under.t);
     }
 }
+
+const wavetext = (n, time) => {
+    const wtext = new TextObject(`Wave ${n}`, time+0.2, time+1.8);
+    wtext.setPos(new Victor(CANVASW/2, CANVASH/2));
+    wtext.setFontSize(100);
+    wtext.setSpacing(20);
+    wtext.setTextMove(textf);
+
+    return wtext;
+}
+const textf = (t) => {
+    const scl = ((t) => {
+        if (t <= (0.25) * FPS) {
+            return new Victor(1, 1).multiplyScalar(1 + 0.5 * ((0.25 * FPS) - t));
+        }
+        if (t > 1.75 * FPS) {
+            return new Victor(1, 1).multiplyScalar((0.25 * FPS) - t);
+        }
+        else return new Victor(1, 1);
+    })(t);
+
+    const pos = ((t) => {
+        if (t >= (0.25) * FPS) {
+            return new Victor(10*Math.cos(10 * (Math.PI / 2) * (t - (0.25)*FPS) / ((4-0.25)*FPS)), 0);
+        }
+        else return new Victor(0, 0);
+    })(t);
+
+    return {
+        pos: pos,
+        rotation: 0,
+        scale: scl
+    };
+};
